@@ -4,7 +4,7 @@ Plataforma completa de rastreabilidade e gestão agrícola do café, composta po
 
 ---
 
-## 🏗️ Arquitetura
+##  Arquitetura
 
 ```
 Ch/
@@ -42,7 +42,7 @@ Os endpoints **nunca** importam SQLAlchemy diretamente. Para migrar para Oracle,
 
 ---
 
-## 🐳 Execução via Docker (recomendado)
+## Execução via Docker (recomendado)
 
 > **Pré-requisito**: [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado e em execução.
 
@@ -55,10 +55,10 @@ Aguarde o build e o healthcheck. Quando estiver pronto:
 
 | Serviço | URL |
 |---|---|
-| 🌐 Frontend | http://localhost:3000 |
-| ⚙️ API Backend | http://localhost:8000 |
-| 📄 Swagger UI | http://localhost:8000/docs |
-| 📄 ReDoc | http://localhost:8000/redoc |
+|  Frontend | http://localhost:3000 |
+|  API Backend | http://localhost:8000 |
+|  Swagger UI | http://localhost:8000/docs |
+|  ReDoc | http://localhost:8000/redoc |
 
 ### Comandos úteis
 
@@ -83,7 +83,7 @@ docker compose up --build backend
 
 ---
 
-## 🛠️ Execução local (sem Docker)
+## Execução local (sem Docker)
 
 ### Backend
 
@@ -116,7 +116,7 @@ npm run dev
 
 ---
 
-## 🧪 Testes
+##  Testes
 
 ### Backend
 
@@ -135,7 +135,7 @@ npm run test
 
 ---
 
-## 📡 Endpoints disponíveis
+##  Endpoints disponíveis
 
 | Domínio               | Prefixo                    | Métodos          |
 |-----------------------|----------------------------|------------------|
@@ -161,7 +161,7 @@ npm run test
 
 ---
 
-## 🔄 Migração para Oracle
+##  Migração para Oracle
 
 ```python
 
@@ -181,7 +181,7 @@ O arquivo `goldblack_coffee.db` (SQLite) é criado automaticamente ao iniciar a 
 
 ---
 
-## 📦 Dependências principais
+##  Dependências principais
 
 | Pacote | Versão | Uso |
 |--------|--------|-----|
