@@ -114,6 +114,8 @@ npm install
 npm run dev
 ```
 
+> **Nota**: o Vite sobe por padrão na porta **5173** (ou outra porta disponível). A URL exata é exibida no terminal após o comando `npm run dev`. Caso queira acessar via domínio fixo, utilize a execução via Docker (porta 3000).
+
 ---
 
 ##  Testes

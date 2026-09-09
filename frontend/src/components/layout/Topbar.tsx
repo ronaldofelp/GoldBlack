@@ -62,19 +62,6 @@ export function Topbar({ apiOnline }: TopbarProps) {
 
       {/* Right area */}
       <div className="flex items-center gap-3">
-        {/* API status indicator */}
-        <div
-          className={clsx(
-            'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border',
-            apiOnline
-              ? 'bg-positive/10 text-positive-light border-positive/30'
-              : 'bg-negative/10 text-negative-light border-negative/30',
-          )}
-          title={apiOnline ? 'Backend conectado' : 'Backend offline — usando dados locais'}
-        >
-          {apiOnline ? <Wifi size={12} /> : <WifiOff size={12} />}
-          <span className="hidden sm:inline">{apiOnline ? 'API Online' : 'API Offline'}</span>
-        </div>
 
         {/* Season badge */}
         <div className="badge badge-gold">
