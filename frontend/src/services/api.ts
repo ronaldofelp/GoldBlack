@@ -4,11 +4,19 @@ import type {
   AgriculturalActivity, TraceabilityBatch, Sale, FinancialTransaction,
 } from '../types';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Axios instance — aponta para o backend FastAPI local
-// ─────────────────────────────────────────────────────────────────────────────
+
+const getBaseUrl = () => {
+
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+
+    return `http://${window.location.hostname}:8000`;
+  }
+
+  return 'http://localhost:8000';
+};
+
 export const api = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: getBaseUrl(),
   timeout: 8000,
   headers: { 'Content-Type': 'application/json' },
 });
