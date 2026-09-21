@@ -627,3 +627,101 @@ class SQLAlchemyFinancialTransactionRepository(IFinancialTransactionRepository):
         self.db.delete(obj)
         self.db.commit()
         return True
+
+
+# ── Coffee Tracking ────────────────────────────────────────────────────────────
+
+class ICoffeeTrackingRepository(IRepository[models.CoffeeTracking]):
+    @abstractmethod
+    def get_by_code(self, tracking_code: str) -> Optional[models.CoffeeTracking]:
+        ...
+
+    @abstractmethod
+    def list_by_status(self, status: models.TrackingStatus, skip: int = 0, limit: int = 100) -> list[models.CoffeeTracking]:
+        ...
+
+    @abstractmethod
+    def next_tracking_code(self) -> str:
+        ...
+
+
+class SQLAlchemyCoffeeTrackingRepository(ICoffeeTrackingRepository):
+    def __init__(self, db: Session):
+        self.db = db
+
+    def get_by_id(self, entity_id: str) -> Optional[models.CoffeeTracking]:
+        return self.db.get(models.CoffeeTracking, entity_id)
+
+    def get_by_code(self, tracking_code: str) -> Optional[models.CoffeeTracking]:
+        return self.db.query(models.CoffeeTracking).filter(
+            models.CoffeeTracking.tracking_code == tracking_code
+        ).first()
+
+    def list_by_status(self, status: models.TrackingStatus, skip: int = 0, limit: int = 100) -> list[models.CoffeeTracking]:
+        return self.db.query(models.CoffeeTracking).filter(
+            models.CoffeeTracking.status == status
+        ).order_by(models.CoffeeTracking.updated_at.desc()).offset(skip).limit(limit).all()
+
+    def list_all(self, skip: int = 0, limit: int = 100) -> list[models.CoffeeTracking]:
+        return self.db.query(models.CoffeeTracking).order_by(
+            models.CoffeeTracking.updated_at.desc()
+        ).offset(skip).limit(limit).all()
+
+    def next_tracking_code(self) -> str:
+        from datetime import datetime as _dt
+        year = _dt.utcnow().year
+        prefix = f"GB-{year}-"
+        last = self.db.query(models.CoffeeTracking).filter(
+            models.CoffeeTracking.tracking_code.like(f"{prefix}%")
+        ).order_by(models.CoffeeTracking.tracking_code.desc()).first()
+        if last:
+            seq = int(last.tracking_code.split("-")[-1]) + 1
+        else:
+            seq = 1
+        return f"{prefix}{seq:04d}"
+
+    def create(self, entity: models.CoffeeTracking) -> models.CoffeeTracking:
+        self.db.add(entity)
+        self.db.commit()
+        self.db.refresh(entity)
+        return entity
+
+    def update(self, entity: models.CoffeeTracking) -> models.CoffeeTracking:
+        self.db.commit()
+        self.db.refresh(entity)
+        return entity
+
+    def delete(self, entity_id: str) -> bool:
+        obj = self.get_by_id(entity_id)
+        if not obj:
+            return False
+        self.db.delete(obj)
+        self.db.commit()
+        return True
+
+
+class ITrackingEventRepository(ABC):
+    @abstractmethod
+    def list_by_tracking(self, tracking_id: str) -> list[models.TrackingEvent]:
+        ...
+
+    @abstractmethod
+    def create(self, entity: models.TrackingEvent) -> models.TrackingEvent:
+        ...
+
+
+class SQLAlchemyTrackingEventRepository(ITrackingEventRepository):
+    def __init__(self, db: Session):
+        self.db = db
+
+    def list_by_tracking(self, tracking_id: str) -> list[models.TrackingEvent]:
+        return self.db.query(models.TrackingEvent).filter(
+            models.TrackingEvent.tracking_id == tracking_id
+        ).order_by(models.TrackingEvent.recorded_at).all()
+
+    def create(self, entity: models.TrackingEvent) -> models.TrackingEvent:
+        self.db.add(entity)
+        self.db.commit()
+        self.db.refresh(entity)
+        return entity
+

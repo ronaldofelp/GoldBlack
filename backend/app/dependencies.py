@@ -31,6 +31,8 @@ from .repositories import (
     SQLAlchemyProcessingPhaseRepository,
     ISaleRepository, SQLAlchemySaleRepository,
     IFinancialTransactionRepository, SQLAlchemyFinancialTransactionRepository,
+    ICoffeeTrackingRepository, SQLAlchemyCoffeeTrackingRepository,
+    ITrackingEventRepository, SQLAlchemyTrackingEventRepository,
 )
 
 
@@ -104,3 +106,11 @@ def get_sale_repo(db: Session = Depends(get_db)) -> ISaleRepository:
 
 def get_financial_transaction_repo(db: Session = Depends(get_db)) -> IFinancialTransactionRepository:
     return SQLAlchemyFinancialTransactionRepository(db)
+
+
+def get_coffee_tracking_repo(db: Session = Depends(get_db)) -> ICoffeeTrackingRepository:
+    return SQLAlchemyCoffeeTrackingRepository(db)
+
+
+def get_tracking_event_repo(db: Session = Depends(get_db)) -> ITrackingEventRepository:
+    return SQLAlchemyTrackingEventRepository(db)

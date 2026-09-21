@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Building2, Leaf, ChevronRight, ChevronDown, ChevronLeft,
   FlaskConical, ShoppingCart, Warehouse, DollarSign, BarChart3,
   Settings, TrendingUp, Activity, Tractor, Droplets, LineChart,
-  Shovel, MapPin, TestTube, Sprout, Eye, PackageSearch,
+  Shovel, MapPin, TestTube, Sprout, Eye, PackageSearch, ScanLine,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -40,6 +40,13 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   { id: 'producao',   label: 'Produção',     icon: <Sprout size={18} />,          path: '/producao' },
+  {
+    id: 'rastreio', label: 'Rastreio', icon: <ScanLine size={18} />, expanded: false,
+    children: [
+      { id: 'track-list', label: 'Rastreios', icon: <Eye size={16} />, path: '/rastreio' },
+      { id: 'track-new',  label: 'Novo Rastreio', icon: <ScanLine size={16} />, path: '/rastreio/novo' },
+    ]
+  },
   { id: 'estoque',    label: 'Estoque',      icon: <Warehouse size={18} />,       path: '/estoque' },
   { id: 'compras',    label: 'Compras',      icon: <ShoppingCart size={18} />,    path: '/compras' },
   {

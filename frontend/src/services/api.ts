@@ -2,6 +2,7 @@ import axios from 'axios';
 import type {
   Plot, Farm, HarvestEstimate, WeatherLog, SystemAlert,
   AgriculturalActivity, TraceabilityBatch, Sale, FinancialTransaction,
+  CoffeeTracking, TrackingEvent,
 } from '../types';
 
 
@@ -106,4 +107,23 @@ export const transactionsApi = {
 
 export const healthApi = {
   check: () => api.get<{ status: string; service: string; version: string }>('/health'),
+};
+
+export const trackingsApi = {
+  list: (status?: string) =>
+    api.get<CoffeeTracking[]>('/trackings', { params: status ? { status } : {} }),
+  getById: (id: string) => api.get<CoffeeTracking>(`/trackings/${id}`),
+  getByCode: (code: string) => api.get<CoffeeTracking>(`/trackings/code/${code}`),
+  create: (data: { batch_id: string; description: string }) =>
+    api.post<CoffeeTracking>('/trackings', data),
+  update: (id: string, data: { description?: string; status?: string }) =>
+    api.patch<CoffeeTracking>(`/trackings/${id}`, data),
+  delete: (id: string) => api.delete(`/trackings/${id}`),
+  addEvent: (id: string, data: { stage: string; notes?: string; recorded_by?: string }) =>
+    api.post<TrackingEvent>(`/trackings/${id}/events`, data),
+  getEvents: (id: string) => api.get<TrackingEvent[]>(`/trackings/${id}/events`),
+  getQRCodeUrl: (id: string) => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+    return `${api.defaults.baseURL}/trackings/${id}/qrcode?base_url=${encodeURIComponent(baseUrl)}`;
+  },
 };
