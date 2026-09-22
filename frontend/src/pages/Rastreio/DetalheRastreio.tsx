@@ -5,7 +5,6 @@ import { trackingsApi } from '../../services/api';
 import type { CoffeeTracking } from '../../types';
 import { TrackingTimeline } from './components/TrackingTimeline';
 import { clsx } from 'clsx';
-import jsPDF from 'jspdf';
 
 export function DetalheRastreio() {
   const { id } = useParams<{ id: string }>();
@@ -58,9 +57,10 @@ export function DetalheRastreio() {
       const blob = await response.blob();
       
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         const base64data = reader.result as string;
         
+        const { default: jsPDF } = await import('jspdf');
         const doc = new jsPDF({
           orientation: 'portrait',
           unit: 'mm',

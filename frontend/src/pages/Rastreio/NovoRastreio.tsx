@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, QrCode, Download, CheckCircle2 } from 'lucide-react';
 import { trackingsApi, batchesApi } from '../../services/api';
 import type { CoffeeTracking, TraceabilityBatch } from '../../types';
-import jsPDF from 'jspdf';
 import { clsx } from 'clsx';
 
 export function NovoRastreio() {
@@ -62,9 +61,10 @@ export function NovoRastreio() {
       const blob = await response.blob();
       
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         const base64data = reader.result as string;
         
+        const { default: jsPDF } = await import('jspdf');
         const doc = new jsPDF({
           orientation: 'portrait',
           unit: 'mm',
