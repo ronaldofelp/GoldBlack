@@ -157,6 +157,21 @@ def require_admin(user: Annotated[models.User, Depends(get_current_user)]) -> mo
     return user
 
 
+def _optional_user(request: Request, user_repo: IUserRepository) -> models.User | None:
+    """Resolve o usuário autenticado em rotas PÚBLICAS (onde o auth_guard não
+    faz o parse do token). Retorna None se não houver Bearer válido — usado para
+    diferenciar o operador logado de quem apenas escaneou o QR."""
+    auth = request.headers.get("Authorization", "")
+    if not auth.lower().startswith("bearer "):
+        return None
+    try:
+        payload = jwt.decode(auth.split(" ", 1)[1], JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+    except JWTError:
+        return None
+    user_id = payload.get("sub")
+    return user_repo.get_by_id(user_id) if user_id else None
+
+
 app = FastAPI(
     title="GoldBlack Coffee Platform API",
     description=(
@@ -1163,22 +1178,38 @@ def delete_tracking(
 def create_tracking_event(
     tracking_id: str,
     payload: schemas.TrackingEventCreate,
+    request: Request,
     tracking_repo: Annotated[ICoffeeTrackingRepository, Depends(get_coffee_tracking_repo)],
     event_repo: Annotated[ITrackingEventRepository, Depends(get_tracking_event_repo)],
+    user_repo: Annotated[IUserRepository, Depends(get_user_repo)],
 ):
-    """Registra uma nova etapa no rastreio. Atualiza o current_stage automaticamente."""
+    """Registra uma nova etapa no rastreio. Atualiza o current_stage automaticamente.
+
+    Rota pública (usada pela página do QR), mas endurecida: o autor do registro
+    (recorded_by) é derivado do chamador — nunca confiado do payload — e a
+    finalização só é permitida a um usuário autenticado."""
     tracking = tracking_repo.get_by_id(tracking_id)
     if not tracking:
         _404("Rastreio", tracking_id)
     if tracking.status == models.TrackingStatus.COMPLETED:
         raise HTTPException(status_code=400, detail="Rastreio já finalizado. Não é possível adicionar novas etapas.")
 
+    # Diferencia o operador logado de quem só escaneou o QR.
+    principal = _optional_user(request, user_repo)
+    if payload.stage == models.TrackingStage.FINALIZADO and principal is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Apenas usuários autenticados podem finalizar um rastreio.",
+        )
+    # Ignora recorded_by do payload (impede falsificação de autoria).
+    recorded_by = principal.name if principal else "Consumidor via QR"
+
     event = models.TrackingEvent(
         id=str(uuid.uuid4()),
         tracking_id=tracking_id,
         stage=payload.stage,
         notes=payload.notes,
-        recorded_by=payload.recorded_by,
+        recorded_by=recorded_by,
     )
     created_event = event_repo.create(event)
 
