@@ -33,6 +33,11 @@ from .repositories import (
     IFinancialTransactionRepository, SQLAlchemyFinancialTransactionRepository,
     ICoffeeTrackingRepository, SQLAlchemyCoffeeTrackingRepository,
     ITrackingEventRepository, SQLAlchemyTrackingEventRepository,
+    SQLAlchemySeasonRepository, SQLAlchemyPlotVarietyRepository,
+    SQLAlchemyProductionRepository, SQLAlchemyMachineRepository,
+    SQLAlchemyWorkerRepository, SQLAlchemyServiceDefinitionRepository,
+    SQLAlchemyMachineUsageRepository, SQLAlchemyLaborEntryRepository,
+    SQLAlchemyActivitySupplyRepository,
 )
 
 
@@ -114,3 +119,41 @@ def get_coffee_tracking_repo(db: Session = Depends(get_db)) -> ICoffeeTrackingRe
 
 def get_tracking_event_repo(db: Session = Depends(get_db)) -> ITrackingEventRepository:
     return SQLAlchemyTrackingEventRepository(db)
+
+
+# ── Domínio de Custo ─────────────────────────────────────────────────────────
+
+def get_season_repo(db: Session = Depends(get_db)) -> SQLAlchemySeasonRepository:
+    return SQLAlchemySeasonRepository(db)
+
+
+def get_plot_variety_repo(db: Session = Depends(get_db)) -> SQLAlchemyPlotVarietyRepository:
+    return SQLAlchemyPlotVarietyRepository(db)
+
+
+def get_production_repo(db: Session = Depends(get_db)) -> SQLAlchemyProductionRepository:
+    return SQLAlchemyProductionRepository(db)
+
+
+def get_machine_repo(db: Session = Depends(get_db)) -> SQLAlchemyMachineRepository:
+    return SQLAlchemyMachineRepository(db)
+
+
+def get_worker_repo(db: Session = Depends(get_db)) -> SQLAlchemyWorkerRepository:
+    return SQLAlchemyWorkerRepository(db)
+
+
+def get_service_definition_repo(db: Session = Depends(get_db)) -> SQLAlchemyServiceDefinitionRepository:
+    return SQLAlchemyServiceDefinitionRepository(db)
+
+
+def get_machine_usage_repo(db: Session = Depends(get_db)) -> SQLAlchemyMachineUsageRepository:
+    return SQLAlchemyMachineUsageRepository(db)
+
+
+def get_labor_entry_repo(db: Session = Depends(get_db)) -> SQLAlchemyLaborEntryRepository:
+    return SQLAlchemyLaborEntryRepository(db)
+
+
+def get_activity_supply_repo(db: Session = Depends(get_db)) -> SQLAlchemyActivitySupplyRepository:
+    return SQLAlchemyActivitySupplyRepository(db)
