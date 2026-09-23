@@ -7,6 +7,8 @@
 .venv/
 venv/
 env/
+.venv-spike/
+.venv-check/
 
 
 *.db
@@ -65,15 +67,30 @@ id_ed25519*
 
 # Oracle Cloud / Autonomous DB wallet (para a migracao futura)
 wallet*.zip
-Wallet_*/
+[Ww]allet*.zip
+[Ww]allet_*/
+wallet/
+ewallet.p12
+ewallet.pem
 tnsnames.ora
 sqlnet.ora
 cwallet.sso
+keystore.jks
+truststore.jks
 ojdbc.properties
 
 # Pasta local com chave SSH da OCI e export de recursos (nao versionar)
 DocumentsClaude/
 documentsClaude/
+
+# Terraform (infra/) — state e variáveis podem conter segredos (senha do ADB)
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
 
 # Artefatos de ferramentas locais (Claude Code / Playwright MCP)
 .playwright-mcp/
