@@ -28,6 +28,7 @@ dist-ssr/
 build/
 *.egg-info/
 
+docs/
 
 .env
 .env.*
@@ -50,3 +51,32 @@ npm-debug.log*
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+
+# Segredos e credenciais (NUNCA commitar)
+*.key
+*.pem
+*.ppk
+id_rsa*
+id_ed25519*
+*.crt
+*.p12
+*.pfx
+
+# Oracle Cloud / Autonomous DB wallet (para a migracao futura)
+wallet*.zip
+Wallet_*/
+tnsnames.ora
+sqlnet.ora
+cwallet.sso
+ojdbc.properties
+
+# Pasta local com chave SSH da OCI e export de recursos (nao versionar)
+DocumentsClaude/
+documentsClaude/
+
+# Artefatos de ferramentas locais (Claude Code / Playwright MCP)
+.playwright-mcp/
+.claude/settings.local.json
+*-mcp/
+gb-login.png
