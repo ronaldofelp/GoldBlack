@@ -11,15 +11,13 @@ Configurado para:
 import os
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config, pool
-
 from alembic import context
 
 # Garante que "app" seja importável quando o alembic roda a partir de backend/.
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.database import Base, DATABASE_URL
+from app.database import Base, DATABASE_URL, engine
 from app import models  # noqa: F401 — registra todos os models no metadata
 
 config = context.config
@@ -32,6 +30,10 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
+# batch mode é uma gambiarra do SQLite (que não tem ALTER TABLE completo); no
+# Oracle ele é desnecessário e recria tabelas à toa, então liga só no SQLite.
+_render_as_batch = DATABASE_URL.startswith("sqlite")
+
 
 def run_migrations_offline() -> None:
     context.configure(
@@ -39,23 +41,20 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        render_as_batch=True,
+        render_as_batch=_render_as_batch,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 
 def run_migrations_online() -> None:
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
-    with connectable.connect() as connection:
+    # Reusa o engine do app (mesma URL + connect_args da wallet Oracle), pra que a
+    # migração fale com o ADB pelo MESMO caminho mTLS que a aplicação em produção.
+    with engine.connect() as connection:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            render_as_batch=True,
+            render_as_batch=_render_as_batch,
         )
         with context.begin_transaction():
             context.run_migrations()
