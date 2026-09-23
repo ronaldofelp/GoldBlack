@@ -76,7 +76,7 @@ export function Atividades({ filterType, pageTitle = "Atividades e Tratos Cultur
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [filterType]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {

@@ -72,6 +72,11 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://164.152.53.29:3000", "http://localhost:5173", "http://localhost:3000"],
+    # Domínios DuckDNS próprios (nomes que registramos) para acessar o app por um
+    # nome legível — ex.: http://goldblackcoffee.duckdns.org:3000. Regex ancorado e
+    # restrito aos nossos nomes: NÃO casa subdomínios duckdns de terceiros.
+    # HTTP (não HTTPS) porque a porta 443 ainda não está liberada na OCI.
+    allow_origin_regex=r"^https?://(goldblackcoffee|goldblack-coffee|goldblackerp)\.duckdns\.org(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

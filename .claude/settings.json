@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -m 8 http://164.152.53.29:8000/batches)",
+      "Bash(python -c ' *)",
+      "mcp__playwright__browser_navigate",
+      "Bash(curl -s --max-time 8 http://164.152.53.29:3000/)",
+      "mcp__playwright__browser_snapshot",
+      "Bash(podman info *)",
+      "Bash(ssh -i DocumentsClaude/ssh-key-2026-09-08.key -o StrictHostKeyChecking=no -o ConnectTimeout=12 ubuntu@164.152.53.29 'uname -m && echo \"--- docker frontend image arch ---\" && sudo docker image inspect goldblack-frontend:latest --format \"{{.Architecture}}\"')",
+      "mcp__playwright__browser_type",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_find"
+    ]
+  }
+}

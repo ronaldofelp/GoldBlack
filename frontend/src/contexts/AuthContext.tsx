@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 
 export interface User {
   id: string;
@@ -17,14 +17,17 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('@GoldBlack:user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+  // Inicializa o estado de forma SÍNCRONA a partir do localStorage.
+  // Assim, num reload / acesso direto a uma rota protegida, o usuário já
+  // existe na primeira renderização e o ProtectedRoute não redireciona pro /login.
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const storedUser = localStorage.getItem('@GoldBlack:user');
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch {
+      return null;
     }
-  }, []);
+  });
 
   const login = async (name: string, password: string): Promise<boolean> => {
     // Mock Auth: João / 0000
