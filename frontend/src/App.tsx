@@ -5,6 +5,12 @@ import { Perfil } from './pages/Perfil';
 import { Layout } from './components/layout/Layout';
 import { DashboardHome } from './pages/Dashboard';
 import { Busca } from './pages/Busca';
+import {
+  Rastreio,
+  NovoRastreio,
+  DetalheRastreio,
+  RastreioPublico
+} from './pages/Rastreio';
 import { VisaoGeral } from './pages/Lavouras/VisaoGeral';
 import { FinanceiroDashboard } from './pages/Financeiro/Dashboard';
 import { FluxoCaixa } from './pages/Financeiro/FluxoCaixa';
@@ -39,8 +45,11 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* Public Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/rastreio/atualizar/:code" element={<RastreioPublico />} />
           
+          {/* Protected Routes */}
           <Route element={
             <ProtectedRoute>
               <Layout />
@@ -65,6 +74,13 @@ export default function App() {
           <Route path="/producao"       element={<Producao />} />
           <Route path="/estoque"        element={<Estoque />} />
           <Route path="/compras"        element={<Compras />} />
+          
+          {/* Tracking / Rastreio */}
+          <Route path="/rastreio"       element={<Rastreio />} />
+          <Route path="/rastreio/novo"  element={<NovoRastreio />} />
+          <Route path="/rastreio/:id"   element={<DetalheRastreio />} />
+
+          {/* Financial & Sales */}
           <Route path="/vendas"         element={<Vendas />} />
           
           <Route path="/financeiro"       element={<FinanceiroDashboard />} />

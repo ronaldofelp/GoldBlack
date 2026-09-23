@@ -5,6 +5,7 @@ from typing import Annotated, Optional
 
 from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 from .database import engine
 from . import models, schemas
@@ -18,6 +19,7 @@ from .dependencies import (
     get_dryer_phase_repo, get_silo_phase_repo,
     get_processing_phase_repo,
     get_sale_repo, get_financial_transaction_repo,
+    get_coffee_tracking_repo, get_tracking_event_repo,
 )
 from .repositories import (
     IUserRepository, IFarmRepository, IPlotRepository,
@@ -26,6 +28,7 @@ from .repositories import (
     IAlertRepository, ISupplyRepository, IActivityRepository,
     IBatchRepository, IPhaseRepository,
     ISaleRepository, IFinancialTransactionRepository,
+    ICoffeeTrackingRepository, ITrackingEventRepository,
 )
 from passlib.context import CryptContext
 
@@ -919,3 +922,178 @@ def delete_transaction(transaction_id: str, repo: Annotated[IFinancialTransactio
 def health_check():
     """Verifica o status operacional da API."""
     return {"status": "ok", "service": "GoldBlack Coffee API", "version": "1.0.0"}
+
+
+# ── Coffee Tracking ────────────────────────────────────────────────────────────
+
+@app.post("/trackings", response_model=schemas.CoffeeTrackingResponse, status_code=201, tags=["Rastreio do Café"])
+def create_tracking(
+    payload: schemas.CoffeeTrackingCreate,
+    repo: Annotated[ICoffeeTrackingRepository, Depends(get_coffee_tracking_repo)],
+    event_repo: Annotated[ITrackingEventRepository, Depends(get_tracking_event_repo)],
+):
+    """Cria um novo rastreio. Gera automaticamente um código único (GB-ANO-XXXX)."""
+    tracking_code = repo.next_tracking_code()
+    obj = models.CoffeeTracking(
+        id=str(uuid.uuid4()),
+        tracking_code=tracking_code,
+        batch_id=payload.batch_id,
+        description=payload.description,
+        current_stage=models.TrackingStage.COLHEITA,
+        status=models.TrackingStatus.IN_PROGRESS,
+    )
+    created = repo.create(obj)
+    # Registra o evento inicial de colheita
+    initial_event = models.TrackingEvent(
+        id=str(uuid.uuid4()),
+        tracking_id=created.id,
+        stage=models.TrackingStage.COLHEITA,
+        notes="Rastreio criado — etapa inicial: Colheita",
+    )
+    event_repo.create(initial_event)
+    # Refresh para incluir o evento na resposta
+    return repo.get_by_id(created.id)
+
+
+@app.get("/trackings", response_model=list[schemas.CoffeeTrackingListResponse], tags=["Rastreio do Café"])
+def list_trackings(
+    status_filter: Optional[models.TrackingStatus] = Query(None, alias="status"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    repo: Annotated[ICoffeeTrackingRepository, Depends(get_coffee_tracking_repo)] = None,
+):
+    """Lista rastreios, opcionalmente filtrando por status (IN_PROGRESS / COMPLETED)."""
+    if status_filter:
+        return repo.list_by_status(status_filter, skip=skip, limit=limit)
+    return repo.list_all(skip=skip, limit=limit)
+
+
+@app.get("/trackings/code/{tracking_code}", response_model=schemas.CoffeeTrackingResponse, tags=["Rastreio do Café"])
+def get_tracking_by_code(
+    tracking_code: str,
+    repo: Annotated[ICoffeeTrackingRepository, Depends(get_coffee_tracking_repo)],
+):
+    """Busca um rastreio pelo código (usado pelo QR Code)."""
+    obj = repo.get_by_code(tracking_code)
+    if not obj:
+        _404("Rastreio", tracking_code)
+    return obj
+
+
+@app.get("/trackings/{tracking_id}", response_model=schemas.CoffeeTrackingResponse, tags=["Rastreio do Café"])
+def get_tracking(
+    tracking_id: str,
+    repo: Annotated[ICoffeeTrackingRepository, Depends(get_coffee_tracking_repo)],
+):
+    """Retorna detalhes de um rastreio pelo ID, incluindo todos os eventos."""
+    obj = repo.get_by_id(tracking_id)
+    if not obj:
+        _404("Rastreio", tracking_id)
+    return obj
+
+
+@app.patch("/trackings/{tracking_id}", response_model=schemas.CoffeeTrackingResponse, tags=["Rastreio do Café"])
+def update_tracking(
+    tracking_id: str,
+    payload: schemas.CoffeeTrackingUpdate,
+    repo: Annotated[ICoffeeTrackingRepository, Depends(get_coffee_tracking_repo)],
+):
+    """Atualiza dados de um rastreio (descrição, status)."""
+    obj = repo.get_by_id(tracking_id)
+    if not obj:
+        _404("Rastreio", tracking_id)
+    data = payload.model_dump(exclude_none=True)
+    if data.get("status") == models.TrackingStatus.COMPLETED:
+        data["completed_at"] = datetime.utcnow()
+    for field, value in data.items():
+        setattr(obj, field, value)
+    return repo.update(obj)
+
+
+@app.delete("/trackings/{tracking_id}", status_code=204, tags=["Rastreio do Café"])
+def delete_tracking(
+    tracking_id: str,
+    repo: Annotated[ICoffeeTrackingRepository, Depends(get_coffee_tracking_repo)],
+):
+    """Remove um rastreio e todo o seu histórico."""
+    if not repo.delete(tracking_id):
+        _404("Rastreio", tracking_id)
+
+
+@app.post("/trackings/{tracking_id}/events", response_model=schemas.TrackingEventResponse, status_code=201, tags=["Rastreio do Café"])
+def create_tracking_event(
+    tracking_id: str,
+    payload: schemas.TrackingEventCreate,
+    tracking_repo: Annotated[ICoffeeTrackingRepository, Depends(get_coffee_tracking_repo)],
+    event_repo: Annotated[ITrackingEventRepository, Depends(get_tracking_event_repo)],
+):
+    """Registra uma nova etapa no rastreio. Atualiza o current_stage automaticamente."""
+    tracking = tracking_repo.get_by_id(tracking_id)
+    if not tracking:
+        _404("Rastreio", tracking_id)
+    if tracking.status == models.TrackingStatus.COMPLETED:
+        raise HTTPException(status_code=400, detail="Rastreio já finalizado. Não é possível adicionar novas etapas.")
+
+    event = models.TrackingEvent(
+        id=str(uuid.uuid4()),
+        tracking_id=tracking_id,
+        stage=payload.stage,
+        notes=payload.notes,
+        recorded_by=payload.recorded_by,
+    )
+    created_event = event_repo.create(event)
+
+    # Atualiza a etapa atual do rastreio
+    tracking.current_stage = payload.stage
+    tracking.updated_at = datetime.utcnow()
+    if payload.stage == models.TrackingStage.FINALIZADO:
+        tracking.status = models.TrackingStatus.COMPLETED
+        tracking.completed_at = datetime.utcnow()
+    tracking_repo.update(tracking)
+
+    return created_event
+
+
+@app.get("/trackings/{tracking_id}/events", response_model=list[schemas.TrackingEventResponse], tags=["Rastreio do Café"])
+def list_tracking_events(
+    tracking_id: str,
+    tracking_repo: Annotated[ICoffeeTrackingRepository, Depends(get_coffee_tracking_repo)],
+    event_repo: Annotated[ITrackingEventRepository, Depends(get_tracking_event_repo)],
+):
+    """Lista todos os eventos/etapas de um rastreio em ordem cronológica."""
+    if not tracking_repo.get_by_id(tracking_id):
+        _404("Rastreio", tracking_id)
+    return event_repo.list_by_tracking(tracking_id)
+
+
+@app.get("/trackings/{tracking_id}/qrcode", tags=["Rastreio do Café"])
+def get_tracking_qrcode(
+    tracking_id: str,
+    base_url: str = Query("http://localhost:3000", description="URL base do frontend"),
+    repo: Annotated[ICoffeeTrackingRepository, Depends(get_coffee_tracking_repo)] = None,
+):
+    """Gera e retorna o QR Code do rastreio como imagem PNG."""
+    import qrcode
+    import io
+
+    tracking = repo.get_by_id(tracking_id)
+    if not tracking:
+        _404("Rastreio", tracking_id)
+
+    url = f"{base_url}/rastreio/atualizar/{tracking.tracking_code}"
+
+    qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_H, box_size=10, border=4)
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="#1A1A1A", back_color="#FFFFFF")
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+
+    return StreamingResponse(
+        buf,
+        media_type="image/png",
+        headers={"Content-Disposition": f'inline; filename="qrcode-{tracking.tracking_code}.png"'},
+    )
+

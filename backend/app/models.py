@@ -345,3 +345,51 @@ class FinancialTransaction(Base):
     status: Mapped[TransactionStatus] = mapped_column(SAEnum(TransactionStatus), nullable=False, default=TransactionStatus.PENDING)
 
     farm: Mapped["Farm"] = relationship("Farm", back_populates="financial_transactions")
+
+
+class TrackingStatus(str, enum.Enum):
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+
+
+class TrackingStage(str, enum.Enum):
+    COLHEITA = "COLHEITA"
+    LAVADOR = "LAVADOR"
+    TERREIRO = "TERREIRO"
+    SECADOR = "SECADOR"
+    TULHA = "TULHA"
+    BENEFICIAMENTO = "BENEFICIAMENTO"
+    CLASSIFICACAO = "CLASSIFICACAO"
+    COMERCIALIZACAO = "COMERCIALIZACAO"
+    FINALIZADO = "FINALIZADO"
+
+
+class CoffeeTracking(Base):
+    __tablename__ = "coffee_trackings"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tracking_code: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
+    batch_id: Mapped[str] = mapped_column(String(36), ForeignKey("traceability_batches.id"), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    current_stage: Mapped[TrackingStage] = mapped_column(SAEnum(TrackingStage), nullable=False, default=TrackingStage.COLHEITA)
+    status: Mapped[TrackingStatus] = mapped_column(SAEnum(TrackingStatus), nullable=False, default=TrackingStatus.IN_PROGRESS)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+
+    batch: Mapped["TraceabilityBatch"] = relationship("TraceabilityBatch")
+    events: Mapped[list["TrackingEvent"]] = relationship("TrackingEvent", back_populates="tracking", cascade="all, delete-orphan", order_by="TrackingEvent.recorded_at")
+
+
+class TrackingEvent(Base):
+    __tablename__ = "tracking_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tracking_id: Mapped[str] = mapped_column(String(36), ForeignKey("coffee_trackings.id"), nullable=False)
+    stage: Mapped[TrackingStage] = mapped_column(SAEnum(TrackingStage), nullable=False)
+    notes: Mapped[str] = mapped_column(Text, nullable=True)
+    recorded_by: Mapped[str] = mapped_column(String(255), nullable=True)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    tracking: Mapped["CoffeeTracking"] = relationship("CoffeeTracking", back_populates="events")
+

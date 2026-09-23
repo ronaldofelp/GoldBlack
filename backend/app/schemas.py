@@ -9,6 +9,7 @@ from .models import (
     UserRole, PlotStatus, RecommendationStatus, SupplyCategory,
     ActivityType, ActivityStatus, CoffeeType,
     TransactionType, TransactionCategory, TransactionStatus, AlertType,
+    TrackingStatus, TrackingStage,
 )
 
 
@@ -428,3 +429,47 @@ class FinancialTransactionResponse(OrmBase):
     due_date: date
     payment_date: Optional[date]
     status: TransactionStatus
+
+
+# ── Coffee Tracking ────────────────────────────────────────────────────────────
+
+class TrackingEventResponse(OrmBase):
+    id: str
+    tracking_id: str
+    stage: TrackingStage
+    notes: Optional[str]
+    recorded_by: Optional[str]
+    recorded_at: datetime
+
+
+class CoffeeTrackingCreate(OrmBase):
+    batch_id: str
+    description: str = Field(..., min_length=2)
+
+
+class CoffeeTrackingUpdate(OrmBase):
+    description: Optional[str] = None
+    status: Optional[TrackingStatus] = None
+
+
+class CoffeeTrackingListResponse(OrmBase):
+    id: str
+    tracking_code: str
+    batch_id: str
+    description: str
+    current_stage: TrackingStage
+    status: TrackingStatus
+    created_at: datetime
+    updated_at: datetime
+    completed_at: Optional[datetime]
+
+
+class CoffeeTrackingResponse(CoffeeTrackingListResponse):
+    events: list[TrackingEventResponse] = []
+
+
+class TrackingEventCreate(OrmBase):
+    stage: TrackingStage
+    notes: Optional[str] = None
+    recorded_by: Optional[str] = None
+

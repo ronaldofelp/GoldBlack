@@ -7,7 +7,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - db_data:/app
+      - ./backend/goldblack_coffee.db:/app/goldblack_coffee.db
     environment:
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
@@ -31,5 +31,3 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-volumes:
-  db_data:

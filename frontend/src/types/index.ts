@@ -196,3 +196,65 @@ export interface DRELine {
   type: 'income' | 'cost' | 'result' | 'subtotal';
   indent?: boolean;
 }
+
+// ── Coffee Tracking ───────────────────────────────────────────────────────────
+
+export type TrackingStage =
+  | 'COLHEITA'
+  | 'LAVADOR'
+  | 'TERREIRO'
+  | 'SECADOR'
+  | 'TULHA'
+  | 'BENEFICIAMENTO'
+  | 'CLASSIFICACAO'
+  | 'COMERCIALIZACAO'
+  | 'FINALIZADO';
+
+export type TrackingStatus = 'IN_PROGRESS' | 'COMPLETED';
+
+export interface TrackingEvent {
+  id: string;
+  tracking_id: string;
+  stage: TrackingStage;
+  notes: string | null;
+  recorded_by: string | null;
+  recorded_at: string;
+}
+
+export interface CoffeeTracking {
+  id: string;
+  tracking_code: string;
+  batch_id: string;
+  description: string;
+  current_stage: TrackingStage;
+  status: TrackingStatus;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+  events?: TrackingEvent[];
+}
+
+export const STAGE_LABELS: Record<TrackingStage, string> = {
+  COLHEITA: 'Colheita',
+  LAVADOR: 'Lavador',
+  TERREIRO: 'Terreiro',
+  SECADOR: 'Secador',
+  TULHA: 'Tulha / Silo',
+  BENEFICIAMENTO: 'Beneficiamento',
+  CLASSIFICACAO: 'Classificação',
+  COMERCIALIZACAO: 'Comercialização',
+  FINALIZADO: 'Finalizado',
+};
+
+export const STAGE_ORDER: TrackingStage[] = [
+  'COLHEITA',
+  'LAVADOR',
+  'TERREIRO',
+  'SECADOR',
+  'TULHA',
+  'BENEFICIAMENTO',
+  'CLASSIFICACAO',
+  'COMERCIALIZACAO',
+  'FINALIZADO',
+];
+
