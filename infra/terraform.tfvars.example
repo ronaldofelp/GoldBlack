@@ -1,0 +1,19 @@
+# Exemplo de variáveis. COPIE para terraform.tfvars e preencha.
+# terraform.tfvars está no .gitignore (contém a senha do ADB) — NÃO commitar.
+#
+# No OCI Resource Manager você NÃO usa este arquivo: os valores são preenchidos
+# num formulário na tela. Este arquivo serve só pro caminho Cloud Shell / local.
+
+compartment_ocid = "ocid1.compartment.oc1..xxxxxxxx"
+region           = "sa-saopaulo-1"
+
+# Cole aqui o conteúdo da sua chave PÚBLICA (o arquivo .pub). Nunca a privada.
+ssh_public_key = "ssh-ed25519 AAAA... voce@maquina"
+
+# Senha do ADMIN do Autonomous DB (12-30 chars, maiúscula+minúscula+número).
+adb_admin_password = "TroqueEstaSenha123"
+
+# Opcionais (têm default):
+# ad_number              = 1     # tente 2 ou 3 se der "Out of host capacity"
+# instance_ocpus         = 2
+# instance_memory_in_gbs = 12

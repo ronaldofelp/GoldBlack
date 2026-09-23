@@ -85,12 +85,22 @@ documentsClaude/
 
 # Terraform (infra/) — state e variáveis podem conter segredos (senha do ADB)
 **/.terraform/
+.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 *.tfvars
 !*.tfvars.example
 crash.log
 crash.*.log
+
+# Infra: artefatos e segredos que NUNCA vão ao repo (só os *.tf + README + *.example vão)
+infra.zip
+infra/infraExport/
+infra/oracle_spike.py
+# Artefatos baixados do OCI Resource Manager (planos/logs de job — podem ter a senha do ADB)
+*ExecutionPlanJson.json
+*[Aa]pply*[Ll]og*.json
+ocid1.ormjob*
 
 # Artefatos de ferramentas locais (Claude Code / Playwright MCP)
 .playwright-mcp/
