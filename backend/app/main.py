@@ -82,6 +82,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from .cost_router import router as cost_router
+app.include_router(cost_router)
+
 
 def _404(entity: str, entity_id: str):
     raise HTTPException(status_code=404, detail=f"{entity} '{entity_id}' não encontrado.")
