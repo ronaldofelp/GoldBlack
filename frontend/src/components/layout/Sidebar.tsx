@@ -5,6 +5,7 @@ import {
   FlaskConical, ShoppingCart, Warehouse, DollarSign, BarChart3,
   Settings, TrendingUp, Activity, Tractor, Droplets, LineChart,
   Shovel, MapPin, TestTube, Sprout, Eye, PackageSearch, ScanLine,
+  Calculator, CalendarRange, Wheat, Users, Handshake,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -55,6 +56,17 @@ const NAV_ITEMS: NavItem[] = [
       { id: 'fin-dashboard', label: 'Dashboard',   icon: <BarChart3 size={16} />,   path: '/financeiro' },
       { id: 'fin-cashflow',  label: 'Fluxo de Caixa', icon: <LineChart size={16} />, path: '/financeiro/caixa' },
       { id: 'fin-cost',      label: 'Custos',      icon: <DollarSign size={16} />,  path: '/financeiro/custos' },
+    ],
+  },
+  {
+    id: 'custo', label: 'Custo', icon: <Calculator size={18} />, expanded: false,
+    children: [
+      { id: 'custo-painel',    label: 'Painel de Custo', icon: <Calculator size={16} />,   path: '/custo' },
+      { id: 'custo-safras',    label: 'Safras',           icon: <CalendarRange size={16} />, path: '/custo/safras' },
+      { id: 'custo-producao',  label: 'Produção (sacas)', icon: <Wheat size={16} />,         path: '/custo/producao' },
+      { id: 'custo-maquinas',  label: 'Máquinas',         icon: <Tractor size={16} />,       path: '/custo/maquinas' },
+      { id: 'custo-workers',   label: 'Trabalhadores',    icon: <Users size={16} />,         path: '/custo/trabalhadores' },
+      { id: 'custo-servicos',  label: 'Serviços',         icon: <Handshake size={16} />,     path: '/custo/servicos' },
     ],
   },
   { id: 'vendas',     label: 'Vendas',       icon: <PackageSearch size={18} />,   path: '/vendas' },

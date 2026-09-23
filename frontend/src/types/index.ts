@@ -9,7 +9,9 @@ export type ActivityType   = 'FERTILIZATION' | 'PRUNING' | 'HARVEST' | 'IRRIGATI
 export type ActivityStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
 export type CoffeeType     = 'NATURAL' | 'PULPED_NATURAL';
 export type AlertType      = 'WEATHER' | 'AGRONOMIC' | 'SYSTEM';
-export type SupplyCategory = 'FERTILIZER' | 'PESTICIDE';
+export type SupplyCategory = 'FERTILIZER' | 'PESTICIDE' | 'CORRECTIVE' | 'FUEL';
+export type WorkerType = 'REGISTERED' | 'THIRD_PARTY';
+export type LaborType  = 'DIARIA' | 'SERVICO';
 export type TransactionType     = 'INCOME' | 'EXPENSE';
 export type TransactionCategory = 'SUPPLY' | 'LABOR' | 'COFFEE_SALE' | 'MAINTENANCE';
 export type TransactionStatus   = 'PAID' | 'PENDING';
@@ -37,6 +39,7 @@ export interface Plot {
   area_ha: number;
   variety: string | null;
   planting_year: number | null;
+  altitude_m?: number | null;
   status: PlotStatus;
 }
 
@@ -71,6 +74,7 @@ export interface SystemAlert {
 export interface AgriculturalActivity {
   id: string;
   plot_id: string;
+  season_id?: string | null;
   recommendation_id: string | null;
   type: ActivityType;
   start_date: string;
@@ -257,4 +261,103 @@ export const STAGE_ORDER: TrackingStage[] = [
   'COMERCIALIZACAO',
   'FINALIZADO',
 ];
+
+// ── Domínio de custo (talhão × safra) ─────────────────────────────────────────
+
+export interface Season {
+  id: string;
+  name: string;
+  start_date: string | null;
+  end_date: string | null;
+}
+
+export interface Production {
+  id: string;
+  plot_id: string;
+  season_id: string;
+  sacks_produced: number;
+  harvest_date: string | null;
+  notes: string | null;
+}
+
+export interface Machine {
+  id: string;
+  farm_id: string;
+  name: string;
+  hourly_cost: number;
+}
+
+export interface Worker {
+  id: string;
+  farm_id: string;
+  name: string;
+  type: WorkerType;
+  daily_rate: number | null;
+}
+
+export interface ServiceDefinition {
+  id: string;
+  farm_id: string;
+  name: string;
+  unit_description: string | null;
+  unit_value: number;
+}
+
+export interface PlotVariety {
+  id: string;
+  plot_id: string;
+  variety: string;
+  planting_year: number | null;
+  area_ha: number | null;
+}
+
+export interface ActivitySupply {
+  activity_id: string;
+  supply_id: string;
+  applied_quantity: number;
+  total_cost: number;
+}
+
+export interface MachineUsage {
+  id: string;
+  activity_id: string;
+  machine_id: string;
+  hours: number;
+}
+
+export interface LaborEntry {
+  id: string;
+  activity_id: string;
+  labor_type: LaborType;
+  worker_id: string | null;
+  service_definition_id: string | null;
+  quantity: number;
+  unit_value: number | null;
+}
+
+// ── Saídas do motor de custo (on-the-fly) ─────────────────────────────────────
+
+export interface ActivityCostBreakdown {
+  activity_id: string;
+  supplies_cost: number;
+  labor_cost: number;
+  machine_cost: number;
+  total_cost: number;
+}
+
+export interface PlotSeasonCost {
+  plot_id: string;
+  season_id: string;
+  area_ha: number;
+  supplies_cost: number;
+  labor_cost: number;
+  machine_cost: number;
+  total_cost: number;
+  cost_per_hectare: number | null;
+  sacks_produced: number | null;
+  cost_per_sack: number | null;
+  revenue: number;
+  gross_profit: number;
+  activities: ActivityCostBreakdown[];
+}
 

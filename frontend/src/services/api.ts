@@ -3,6 +3,9 @@ import type {
   Plot, Farm, HarvestEstimate, WeatherLog, SystemAlert,
   AgriculturalActivity, TraceabilityBatch, Sale, FinancialTransaction,
   CoffeeTracking, TrackingEvent,
+  Season, Production, Machine, Worker, ServiceDefinition, PlotVariety,
+  ActivitySupply, MachineUsage, LaborEntry,
+  ActivityCostBreakdown, PlotSeasonCost,
 } from '../types';
 
 
@@ -126,4 +129,87 @@ export const trackingsApi = {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
     return `${api.defaults.baseURL}/trackings/${id}/qrcode?base_url=${encodeURIComponent(baseUrl)}`;
   },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Domínio de custo (talhão × safra)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const seasonsApi = {
+  list: () => api.get<Season[]>('/seasons'),
+  getById: (id: string) => api.get<Season>(`/seasons/${id}`),
+  create: (data: Omit<Season, 'id'>) => api.post<Season>('/seasons', data),
+  update: (id: string, data: Partial<Omit<Season, 'id'>>) => api.patch<Season>(`/seasons/${id}`, data),
+  delete: (id: string) => api.delete(`/seasons/${id}`),
+};
+
+export const productionsApi = {
+  list: (plotId?: string) =>
+    api.get<Production[]>('/productions', { params: plotId ? { plot_id: plotId } : {} }),
+  create: (data: Omit<Production, 'id'>) => api.post<Production>('/productions', data),
+  update: (id: string, data: Partial<Omit<Production, 'id'>>) => api.patch<Production>(`/productions/${id}`, data),
+  delete: (id: string) => api.delete(`/productions/${id}`),
+};
+
+export const machinesApi = {
+  list: (farmId?: string) =>
+    api.get<Machine[]>('/machines', { params: farmId ? { farm_id: farmId } : {} }),
+  create: (data: Omit<Machine, 'id'>) => api.post<Machine>('/machines', data),
+  update: (id: string, data: Partial<Omit<Machine, 'id'>>) => api.patch<Machine>(`/machines/${id}`, data),
+  delete: (id: string) => api.delete(`/machines/${id}`),
+};
+
+export const workersApi = {
+  list: (farmId?: string) =>
+    api.get<Worker[]>('/workers', { params: farmId ? { farm_id: farmId } : {} }),
+  create: (data: Omit<Worker, 'id'>) => api.post<Worker>('/workers', data),
+  update: (id: string, data: Partial<Omit<Worker, 'id'>>) => api.patch<Worker>(`/workers/${id}`, data),
+  delete: (id: string) => api.delete(`/workers/${id}`),
+};
+
+export const serviceDefinitionsApi = {
+  list: (farmId?: string) =>
+    api.get<ServiceDefinition[]>('/service-definitions', { params: farmId ? { farm_id: farmId } : {} }),
+  create: (data: Omit<ServiceDefinition, 'id'>) => api.post<ServiceDefinition>('/service-definitions', data),
+  update: (id: string, data: Partial<Omit<ServiceDefinition, 'id'>>) => api.patch<ServiceDefinition>(`/service-definitions/${id}`, data),
+  delete: (id: string) => api.delete(`/service-definitions/${id}`),
+};
+
+export const plotVarietiesApi = {
+  list: (plotId?: string) =>
+    api.get<PlotVariety[]>('/plot-varieties', { params: plotId ? { plot_id: plotId } : {} }),
+  create: (data: Omit<PlotVariety, 'id'>) => api.post<PlotVariety>('/plot-varieties', data),
+  delete: (id: string) => api.delete(`/plot-varieties/${id}`),
+};
+
+// Lançamentos de custo dentro de uma atividade
+export const activityCostApi = {
+  listSupplies: (activityId: string) =>
+    api.get<ActivitySupply[]>(`/activities/${activityId}/supplies`),
+  addSupply: (activityId: string, data: { supply_id: string; applied_quantity: number; total_cost?: number | null }) =>
+    api.post<ActivitySupply>(`/activities/${activityId}/supplies`, data),
+  removeSupply: (activityId: string, supplyId: string) =>
+    api.delete(`/activities/${activityId}/supplies/${supplyId}`),
+
+  listLabor: (activityId: string) =>
+    api.get<LaborEntry[]>(`/activities/${activityId}/labor`),
+  addLabor: (activityId: string, data: Omit<LaborEntry, 'id' | 'activity_id'>) =>
+    api.post<LaborEntry>(`/activities/${activityId}/labor`, data),
+  removeLabor: (activityId: string, entryId: string) =>
+    api.delete(`/activities/${activityId}/labor/${entryId}`),
+
+  listMachineUsage: (activityId: string) =>
+    api.get<MachineUsage[]>(`/activities/${activityId}/machine-usage`),
+  addMachineUsage: (activityId: string, data: { machine_id: string; hours: number }) =>
+    api.post<MachineUsage>(`/activities/${activityId}/machine-usage`, data),
+  removeMachineUsage: (activityId: string, usageId: string) =>
+    api.delete(`/activities/${activityId}/machine-usage/${usageId}`),
+};
+
+// Agregação de custo (calculada on-the-fly no backend)
+export const costApi = {
+  activityCost: (activityId: string) =>
+    api.get<ActivityCostBreakdown>(`/activities/${activityId}/cost`),
+  plotSeasonCost: (plotId: string, seasonId: string) =>
+    api.get<PlotSeasonCost>(`/plots/${plotId}/seasons/${seasonId}/cost`),
 };
