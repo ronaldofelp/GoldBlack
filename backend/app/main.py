@@ -65,16 +65,23 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # Autenticação (JWT stateless)
 # ─────────────────────────────────────────────────────────────────────────────
 _DEV_JWT_SECRET = "dev-secret-troque-em-producao-goldblack"
+_DEV_ENVS = {"development", "dev", "test", "testing", "local"}
 APP_ENV = os.getenv("APP_ENV", "development").lower()
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+# Deny-by-default: só cai no segredo de dev em ambientes reconhecidamente dev/test.
+# Qualquer outro valor de APP_ENV (staging, prod, typo...) exige segredo próprio.
 if not JWT_SECRET_KEY:
-    # Falha fechada em produção: nunca rodar com segredo previsível (está no repo).
-    if APP_ENV == "production":
+    if APP_ENV not in _DEV_ENVS:
         raise RuntimeError(
-            "JWT_SECRET_KEY precisa estar definida em produção (APP_ENV=production). "
-            "Gere um segredo forte e configure a variável de ambiente no container."
+            "JWT_SECRET_KEY é obrigatório fora de ambientes dev/test "
+            f"(APP_ENV={APP_ENV!r}). Gere um segredo forte e configure a variável de ambiente."
         )
     JWT_SECRET_KEY = _DEV_JWT_SECRET  # somente dev/teste
+# Nunca aceitar o default do repo como se fosse segredo real, mesmo se colado na env var.
+elif JWT_SECRET_KEY == _DEV_JWT_SECRET and APP_ENV not in _DEV_ENVS:
+    raise RuntimeError("JWT_SECRET_KEY não pode ser o valor default do repositório em produção.")
+elif JWT_SECRET_KEY != _DEV_JWT_SECRET and len(JWT_SECRET_KEY) < 16:
+    raise RuntimeError("JWT_SECRET_KEY muito curto: use pelo menos 16 caracteres de alta entropia.")
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", str(60 * 12)))  # 12h
 
