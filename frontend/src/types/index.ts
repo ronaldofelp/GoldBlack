@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Enums ─────────────────────────────────────────────────────────────────────
-export type UserRole       = 'PRODUCER' | 'AGRONOMIST' | 'OPERATOR';
+export type UserRole       = 'ADMIN' | 'OPERATOR';
 export type PlotStatus     = 'IN_PRODUCTION' | 'RENOVATION' | 'DEVELOPMENT';
 export type ActivityType   = 'FERTILIZATION' | 'PRUNING' | 'HARVEST' | 'IRRIGATION' | 'PESTICIDE_APPLICATION';
 export type ActivityStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
@@ -269,6 +269,20 @@ export interface Season {
   name: string;
   start_date: string | null;
   end_date: string | null;
+}
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  created_at?: string;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  user: AuthUser;
 }
 
 export interface Production {

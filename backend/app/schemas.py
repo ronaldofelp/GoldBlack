@@ -39,6 +39,17 @@ class UserResponse(OrmBase):
     created_at: datetime
 
 
+class LoginRequest(OrmBase):
+    email: EmailStr
+    password: str
+
+
+class Token(OrmBase):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+
 class FarmCreate(OrmBase):
     producer_id: str
     name: str = Field(..., min_length=2, max_length=255)

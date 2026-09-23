@@ -4,6 +4,12 @@ from app.main import app
 
 client = TestClient(app)
 
+# CRUD de rastreio é protegido (só o consumo público via QR é aberto). Autentica
+# o client de teste como o admin semeado.
+_login = client.post("/auth/login", json={"email": "joao@goldblack.com.br", "password": "senha123"})
+assert _login.status_code == 200, f"Login de teste falhou: {_login.text}"
+client.headers.update({"Authorization": f"Bearer {_login.json()['access_token']}"})
+
 state = {
     "farm_id": None,
     "plot_id": None,

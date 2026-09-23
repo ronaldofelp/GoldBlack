@@ -36,7 +36,7 @@ def _scenario(db):
     total atividade = 1860. Produção = 30 sacas. Venda = R$4000.
     """
     farm = models.Farm(id="f1", producer_id="u1", name="Faz", total_area_ha=Decimal("100"))
-    user = models.User(id="u1", name="P", email="p@x.com", password_hash="x", role=models.UserRole.PRODUCER)
+    user = models.User(id="u1", name="P", email="p@x.com", password_hash="x", role=models.UserRole.ADMIN)
     plot = models.Plot(id="p1", farm_id="f1", code="T-01", area_ha=Decimal("10"), status=models.PlotStatus.IN_PRODUCTION)
     season = models.Season(id="s1", name="2025/2026")
     supply = models.AgriculturalSupply(id="sup1", name="Ureia", category=models.SupplyCategory.FERTILIZER,
@@ -98,7 +98,7 @@ def test_plot_season_cost_metrics(db):
 def test_no_production_yields_none_cost_per_sack(db):
     """Sem produção lançada, custo/saca é None (não quebra, não divide por zero)."""
     farm = models.Farm(id="f9", producer_id="u9", name="F", total_area_ha=Decimal("5"))
-    user = models.User(id="u9", name="P", email="p9@x.com", password_hash="x", role=models.UserRole.PRODUCER)
+    user = models.User(id="u9", name="P", email="p9@x.com", password_hash="x", role=models.UserRole.ADMIN)
     plot = models.Plot(id="p9", farm_id="f9", code="T-09", area_ha=Decimal("5"), status=models.PlotStatus.IN_PRODUCTION)
     season = models.Season(id="s9", name="2024/2025")
     db.add_all([user, farm, plot, season])

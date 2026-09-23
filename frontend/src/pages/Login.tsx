@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Coffee, Loader2 } from 'lucide-react';
 
 export function Login() {
-  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,17 +15,14 @@ export function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
-    // Simulate network delay
-    await new Promise(r => setTimeout(r, 800));
-    
-    const success = await login(name, password);
+
+    const success = await login(email, password);
     setLoading(false);
-    
+
     if (success) {
       navigate('/');
     } else {
-      setError('Credenciais inválidas. Tente "joão" e "0000".');
+      setError('E-mail ou senha inválidos. Verifique suas credenciais.');
     }
   };
 
@@ -48,13 +45,14 @@ export function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="flex flex-col space-y-1.5">
-            <label className="text-sm font-medium text-text-primary">Nome de Usuário</label>
+            <label className="text-sm font-medium text-text-primary">E-mail</label>
             <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="input-base"
-              placeholder="Digite seu nome (ex: joão)"
+              placeholder="Digite seu e-mail"
+              autoComplete="email"
               required
             />
           </div>

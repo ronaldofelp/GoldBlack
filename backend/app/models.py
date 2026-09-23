@@ -11,8 +11,7 @@ from .database import Base
 
 
 class UserRole(str, enum.Enum):
-    PRODUCER = "PRODUCER"
-    AGRONOMIST = "AGRONOMIST"
+    ADMIN = "ADMIN"
     OPERATOR = "OPERATOR"
 
 

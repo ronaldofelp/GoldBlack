@@ -6,7 +6,11 @@ import type {
   Season, Production, Machine, Worker, ServiceDefinition, PlotVariety,
   ActivitySupply, MachineUsage, LaborEntry,
   ActivityCostBreakdown, PlotSeasonCost,
+  LoginResponse, AuthUser,
 } from '../types';
+
+export const TOKEN_KEY = '@GoldBlack:token';
+export const USER_KEY = '@GoldBlack:user';
 
 
 const getBaseUrl = () => {
@@ -25,10 +29,32 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Interceptor: repassa erros de forma legível
+// Interceptor de requisição: anexa o token JWT (Bearer) quando existir
+api.interceptors.request.use((config: import('axios').InternalAxiosRequestConfig) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
+  if (token) {
+    config.headers.set('Authorization', `Bearer ${token}`);
+  }
+  return config;
+});
+
+// Interceptor de resposta: repassa erros de forma legível + trata sessão expirada (401)
 api.interceptors.response.use(
   (res: import('axios').AxiosResponse) => res,
   (err: import('axios').AxiosError) => {
+    const status = err.response?.status;
+    const url = err.config?.url ?? '';
+    const isLoginAttempt = url.includes('/auth/login');
+
+    // Token ausente/expirado/inválido: limpa sessão e manda pro login
+    if (status === 401 && !isLoginAttempt && typeof window !== 'undefined') {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      if (window.location.pathname !== '/login') {
+        window.location.assign('/login');
+      }
+    }
+
     const data = err.response?.data as Record<string, unknown> | undefined;
     const msg = (data?.['detail'] as string) ?? err.message ?? 'Erro desconhecido';
     return Promise.reject(new Error(msg));
@@ -38,6 +64,12 @@ api.interceptors.response.use(
 // ─────────────────────────────────────────────────────────────────────────────
 // Chamadas tipadas
 // ─────────────────────────────────────────────────────────────────────────────
+
+export const authApi = {
+  login: (email: string, password: string) =>
+    api.post<LoginResponse>('/auth/login', { email, password }),
+  me: () => api.get<AuthUser>('/auth/me'),
+};
 
 export const plotsApi = {
   list: (farmId?: string) =>

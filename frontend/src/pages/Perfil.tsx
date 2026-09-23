@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, ROLE_LABELS } from '../contexts/AuthContext';
 import { User, Mail, Shield, ShieldCheck } from 'lucide-react';
 
 export function Perfil() {
@@ -24,7 +24,7 @@ export function Perfil() {
               <h2 className="text-xl font-bold text-text-primary">{user.name}</h2>
               <div className="flex items-center gap-2 mt-2">
                 <span className="px-2 py-1 bg-gold/10 text-gold-light border border-gold/20 rounded text-xs font-medium">
-                  {user.role}
+                  {ROLE_LABELS[user.role]}
                 </span>
                 <span className="px-2 py-1 bg-positive/10 text-positive-light border border-positive/20 rounded text-xs font-medium flex items-center gap-1">
                   <ShieldCheck size={12} /> Conta Ativa
@@ -50,7 +50,7 @@ export function Perfil() {
               <label className="text-sm font-medium text-text-muted flex items-center gap-2">
                 <Shield size={16} /> Nível de Acesso
               </label>
-              <p className="text-text-primary font-medium">Administrador do Sistema</p>
+              <p className="text-text-primary font-medium">{ROLE_LABELS[user.role]}</p>
             </div>
           </div>
         </div>

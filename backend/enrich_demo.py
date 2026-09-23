@@ -61,7 +61,7 @@ def main():
 
     farm1 = farms[0]
     producer_id = farm1["producer_id"]
-    agronomist = next((u for u in users if u["role"] == "AGRONOMIST"), users[0])
+    agronomist = next((u for u in users if u["role"] == "OPERATOR"), users[0])
     agro_id = agronomist["id"]
 
     # talhões "de verdade" (ignora lixo de teste com variety numérica/áreas absurdas)
