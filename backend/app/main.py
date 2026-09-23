@@ -64,7 +64,17 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # ─────────────────────────────────────────────────────────────────────────────
 # Autenticação (JWT stateless)
 # ─────────────────────────────────────────────────────────────────────────────
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-secret-troque-em-producao-goldblack")
+_DEV_JWT_SECRET = "dev-secret-troque-em-producao-goldblack"
+APP_ENV = os.getenv("APP_ENV", "development").lower()
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not JWT_SECRET_KEY:
+    # Falha fechada em produção: nunca rodar com segredo previsível (está no repo).
+    if APP_ENV == "production":
+        raise RuntimeError(
+            "JWT_SECRET_KEY precisa estar definida em produção (APP_ENV=production). "
+            "Gere um segredo forte e configure a variável de ambiente no container."
+        )
+    JWT_SECRET_KEY = _DEV_JWT_SECRET  # somente dev/teste
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", str(60 * 12)))  # 12h
 
