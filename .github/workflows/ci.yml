@@ -8,6 +8,11 @@ on:
   pull_request:
     branches: ["main"]
 
+# Princípio do menor privilégio: o workflow só precisa ler o código.
+# Nenhum job escreve no repositório — contents: write seria excessivo.
+permissions:
+  contents: read
+
 env:
   REGISTRY:  vcp.ocir.io
   NAMESPACE: ax52rtggbppy
@@ -82,9 +87,13 @@ jobs:
       - name: Deploy na VM
         uses: appleboy/ssh-action@v1
         with:
-          host:     ${{ secrets.VM_HOST }}
-          username: ubuntu
-          key:      ${{ secrets.SSH_PRIVATE_KEY }}
+          host:        ${{ secrets.VM_HOST }}
+          username:    ubuntu
+          key:         ${{ secrets.SSH_PRIVATE_KEY }}
+          # Verifica o fingerprint do host para prevenir MITM caso o IP mude de mãos.
+          # Gere o valor com: ssh-keyscan -t ed25519 <IP> | ssh-keygen -lf -
+          # e armazene o resultado (SHA256:...) como secret SSH_HOST_FINGERPRINT.
+          fingerprint: ${{ secrets.SSH_HOST_FINGERPRINT }}
           envs: OCIR_USER,OCIR_TOKEN,REGISTRY,NAMESPACE
           script: |
             # Re-autentica no OCIR para garantir que o pull funciona
