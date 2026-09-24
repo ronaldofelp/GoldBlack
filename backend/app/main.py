@@ -194,9 +194,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://164.152.53.29:3000", "http://localhost:5173", "http://localhost:3000"],
     # Domínios DuckDNS próprios (nomes que registramos) para acessar o app por um
-    # nome legível — ex.: http://goldblackcoffee.duckdns.org:3000. Regex ancorado e
-    # restrito aos nossos nomes: NÃO casa subdomínios duckdns de terceiros.
-    # HTTP (não HTTPS) porque a porta 443 ainda não está liberada na OCI.
+    # nome legível — hoje em produção: https://goldblackcoffee.duckdns.org (HTTPS via
+    # Caddy/Let's Encrypt). Regex ancorado e restrito aos nossos nomes: NÃO casa
+    # subdomínios duckdns de terceiros. Aceita http|https e porta opcional por
+    # compatibilidade (ex.: acesso direto durante manutenção).
     allow_origin_regex=r"^https?://(goldblackcoffee|goldblack-coffee|goldblackerp)\.duckdns\.org(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
