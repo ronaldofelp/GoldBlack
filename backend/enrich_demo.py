@@ -7,9 +7,11 @@ este script apenas ADICIONA registros via HTTP POST na API existente.
 Assim, os lotes de rastreio (QR) já configurados para a banca são preservados.
 
 Uso:
-    python enrich_demo.py                      # usa a VM ao vivo
-    BASE=http://localhost:8000 python enrich_demo.py
+    python enrich_demo.py                          # aponta para a VM de produção
+    BASE=http://localhost:8000 API_PREFIX="" python enrich_demo.py   # backend local direto
+    ADMIN_EMAIL=x@y.com ADMIN_PASSWORD=senha python enrich_demo.py  # sem prompt
 """
+import getpass
 import json
 import os
 import sys
@@ -17,16 +19,20 @@ import urllib.request
 import urllib.error
 from datetime import date, timedelta
 
-BASE = os.environ.get("BASE", "http://164.152.53.29:8000")
+BASE       = os.environ.get("BASE", "http://204.216.129.119")
+_API       = os.environ.get("API_PREFIX", "/api")   # "" se apontar direto ao backend:8000
+_TOKEN: str | None = None
 
 created = {}  # contadores por entidade
 
 
 def _req(method, path, payload=None):
-    url = f"{BASE}{path}"
+    url = f"{BASE}{_API}{path}"
     data = json.dumps(payload).encode() if payload is not None else None
-    req = urllib.request.Request(url, data=data, method=method,
-                                 headers={"Content-Type": "application/json"})
+    headers = {"Content-Type": "application/json"}
+    if _TOKEN:
+        headers["Authorization"] = f"Bearer {_TOKEN}"
+    req = urllib.request.Request(url, data=data, method=method, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
             body = r.read().decode()
@@ -35,6 +41,18 @@ def _req(method, path, payload=None):
         detail = e.read().decode()
         print(f"   ! {method} {path} -> HTTP {e.code}: {detail[:160]}")
         return None
+
+
+def _login(email: str, password: str) -> bool:
+    """Autentica na API e armazena o token JWT globalmente."""
+    global _TOKEN
+    res = _req("POST", "/auth/login", {"email": email, "password": password})
+    if res and res.get("access_token"):
+        _TOKEN = res["access_token"]
+        print(f"[*] Autenticado como {email}\n")
+        return True
+    print("!! Falha na autenticacao. Verifique e-mail/senha do admin.")
+    return False
 
 
 def get(path):
@@ -49,6 +67,12 @@ def post(path, payload, label):
 
 
 def main():
+    # ── Autenticação ────────────────────────────────────────────────────────
+    email    = os.environ.get("ADMIN_EMAIL")    or input("E-mail do admin: ")
+    password = os.environ.get("ADMIN_PASSWORD") or getpass.getpass("Senha: ")
+    if not _login(email, password):
+        sys.exit(1)
+
     print(f"[*] Enriquecendo API em {BASE}\n")
 
     # ── IDs existentes ──────────────────────────────────────────────────────
