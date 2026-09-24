@@ -31,7 +31,7 @@ services:
       - backend
 
   backend:
-    image: vinhedo.ocir.io/${OCIR_NAMESPACE}/goldblack-backend:latest
+    image: vcp.ocir.io/${OCIR_NAMESPACE}/goldblack-backend:latest
     container_name: goldblack_backend
     restart: unless-stopped
     environment:
@@ -57,7 +57,7 @@ services:
     # sem expose de porta pro host — só o Caddy acessa via rede interna
 
   frontend:
-    image: vinhedo.ocir.io/${OCIR_NAMESPACE}/goldblack-frontend:latest
+    image: vcp.ocir.io/${OCIR_NAMESPACE}/goldblack-frontend:latest
     container_name: goldblack_frontend
     restart: unless-stopped
     depends_on:
