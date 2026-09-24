@@ -16,6 +16,14 @@ import getpass
 import os
 import sys
 
+# Garante saída UTF-8 mesmo em consoles legados (ex.: cp1252 no Windows),
+# evitando UnicodeEncodeError ao imprimir texto acentuado (ç, ã, é...).
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
+
 WALLET_DIR = os.environ.get("ORACLE_WALLET_DIR") or os.environ.get("TNS_ADMIN") or \
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "wallet")
 

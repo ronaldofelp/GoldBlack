@@ -21,6 +21,14 @@ import os
 import sys
 import uuid
 
+# Garante saída UTF-8 mesmo em consoles legados (ex.: cp1252 no Windows),
+# evitando UnicodeEncodeError ao imprimir texto acentuado (ç, ã, é...).
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
+
 # Garante que o pacote app seja importável rodando de dentro de backend/
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
