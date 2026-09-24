@@ -1,39 +1,14 @@
 # GoldBlack — Caddy reverse proxy
-#
-# ESTADO ATUAL: HTTP temporário (sem domínio ainda).
-# PRÓXIMO PASSO: assim que o subdomínio DuckDNS estiver apontando para
-#   204.216.129.119, comente o bloco ":80 { ... }" abaixo e descomente
-#   o bloco "HTTPS". Caddy obtém e renova o certificado automaticamente.
-#
-# Pré-requisito para HTTPS:
-#   1. Subdomínio criado em duckdns.org → 204.216.129.119
-#   2. Portas 80 E 443 abertas na OCI Security List
-#   3. Substituir "seu-subdominio.duckdns.org" pelo domínio real
 
+# ── HTTPS (produção) ──────────────────────────────────────────────────────────
+# Caddy obtém e renova o certificado Let's Encrypt automaticamente.
+# Pré-requisito: goldblackcoffee.duckdns.org → 204.216.129.119 (DuckDNS)
+#                portas 80 e 443 abertas na OCI Security List
 
-# ── HTTPS (produção — descomente quando o domínio estiver configurado) ───────
-#
-# seu-subdominio.duckdns.org {
-#     # HSTS: força HTTPS por 1 ano após primeira visita
-#     header Strict-Transport-Security "max-age=31536000; includeSubDomains"
-#
-#     handle /api/* {
-#         uri strip_prefix /api
-#         reverse_proxy backend:8000
-#     }
-#     handle {
-#         reverse_proxy frontend:80
-#     }
-# }
-#
-# # Redireciona qualquer request HTTP → HTTPS permanentemente
-# :80 {
-#     redir https://{host}{uri} permanent
-# }
+goldblackcoffee.duckdns.org {
+    # HSTS: força HTTPS por 1 ano após primeira visita
+    header Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
-
-# ── HTTP temporário (comente/remova ao ativar o bloco HTTPS acima) ───────────
-:80 {
     handle /api/* {
         uri strip_prefix /api
         reverse_proxy backend:8000
@@ -41,4 +16,9 @@
     handle {
         reverse_proxy frontend:80
     }
+}
+
+# Redireciona qualquer request HTTP → HTTPS permanentemente
+:80 {
+    redir https://{host}{uri} permanent
 }
