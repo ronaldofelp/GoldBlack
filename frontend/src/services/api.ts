@@ -58,6 +58,24 @@ api.interceptors.response.use(
   },
 );
 
+// Cliente PÚBLICO (rota do QR de rastreio): não anexa token nem redireciona
+// para /login em 401. Um consumidor anônimo escaneando o QR jamais pode ser
+// jogado para a tela de login do ERP — isso quebraria o diferencial do produto.
+export const publicApi = axios.create({
+  baseURL: getBaseUrl(),
+  timeout: 8000,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+publicApi.interceptors.response.use(
+  (res: import('axios').AxiosResponse) => res,
+  (err: import('axios').AxiosError) => {
+    const data = err.response?.data as Record<string, unknown> | undefined;
+    const msg = (data?.['detail'] as string) ?? err.message ?? 'Erro desconhecido';
+    return Promise.reject(new Error(msg));
+  },
+);
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Chamadas tipadas
 // ─────────────────────────────────────────────────────────────────────────────
@@ -158,6 +176,14 @@ export const trackingsApi = {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
     return `${api.defaults.baseURL}/trackings/${id}/qrcode?base_url=${encodeURIComponent(baseUrl)}`;
   },
+};
+
+// Rastreio via QR para o consumidor anônimo — usa o cliente público (sem
+// redirect de 401). Mesmos endpoints públicos do backend.
+export const publicTrackingsApi = {
+  getByCode: (code: string) => publicApi.get<CoffeeTracking>(`/trackings/code/${code}`),
+  addEvent: (id: string, data: { stage: string; notes?: string; recorded_by?: string }) =>
+    publicApi.post<TrackingEvent>(`/trackings/${id}/events`, data),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

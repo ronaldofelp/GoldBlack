@@ -103,16 +103,21 @@ export function FinanceiroDashboard() {
   const [selectedSeasonId, setSelectedSeasonId] = useState<string>('');
   const [plotCosts, setPlotCosts]       = useState<ProfitRow[] | null>(null); // null = usar mock
   const [loading, setLoading]           = useState(true);
+  // Verdadeiro só quando a API falha e caímos nos dados fabricados — nesse caso
+  // mostramos um selo "demonstração" para ninguém confundir com números reais.
+  const [usingMock, setUsingMock]       = useState(false);
 
   // ── Financeiro (transações + vendas) ────────────────────────────────────────
   useEffect(() => {
     async function load() {
       try {
         const [t, s] = await Promise.all([transactionsApi.list(), salesApi.list()]);
-        if (t.data.length) setTransactions(t.data);
-        if (s.data.length) setSales(s.data);
+        // Sucesso manda: usa o que veio do backend MESMO que vazio. Um conjunto
+        // legitimamente vazio (fazenda nova) não pode ser mascarado pelo mock.
+        setTransactions(t.data);
+        setSales(s.data);
       } catch {
-        // fallback to mock
+        setUsingMock(true); // backend indisponível → mantém dados de demonstração
       } finally {
         setLoading(false);
       }
@@ -125,13 +130,13 @@ export function FinanceiroDashboard() {
     async function loadRefs() {
       try {
         const [p, se] = await Promise.all([plotsApi.list(), seasonsApi.list()]);
-        if (p.data.length) setPlots(p.data);
+        setPlots(p.data);
+        setSeasons(se.data);
         if (se.data.length) {
-          setSeasons(se.data);
           setSelectedSeasonId((cur) => cur || se.data[se.data.length - 1].id);
         }
       } catch {
-        // endpoints de custo indisponíveis (backend antigo) → mantém rentabilidade mock
+        setUsingMock(true); // endpoints indisponíveis → rentabilidade em modo demo
       }
     }
     loadRefs();
@@ -139,7 +144,8 @@ export function FinanceiroDashboard() {
 
   // ── Rentabilidade REAL por talhão (motor de custo) na safra selecionada ──────
   useEffect(() => {
-    if (!plots.length || !selectedSeasonId) return;
+    if (!selectedSeasonId) { setPlotCosts(null); return; }
+    if (!plots.length) { setPlotCosts([]); return; } // refs carregaram vazias → sem mock
     let cancelled = false;
     (async () => {
       const results = await Promise.all(
@@ -166,7 +172,7 @@ export function FinanceiroDashboard() {
             sacksProduced: Number(cost.sacks_produced) || 0,
           };
         });
-      if (rows.length) setPlotCosts(rows);
+      setPlotCosts(rows); // mesmo vazio: não mascara com o mock de rentabilidade
     })();
     return () => { cancelled = true; };
   }, [plots, selectedSeasonId]);
@@ -176,15 +182,17 @@ export function FinanceiroDashboard() {
   const totalCost  = transactions.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + Number(t.amount), 0);
   const profit     = revenue - totalCost;
   const margin     = revenue > 0 ? (profit / revenue) * 100 : 0;
-  const totalSacks = plotCosts ? plotCosts.reduce((s, r) => s + r.sacksProduced, 0) : 1880;
-  const costPerSack = totalSacks > 0 ? totalCost / totalSacks : 0;
+  // Sacas reais do motor de custo. Sem produção lançada → custo/saca indisponível
+  // (nada de dividir por um número fictício).
+  const totalSacks = (plotCosts ?? []).reduce((s, r) => s + r.sacksProduced, 0);
+  const costPerSack: number | null = totalSacks > 0 ? totalCost / totalSacks : null;
   const breakEven  = revenue > 0 && profit > 0 ? totalCost : revenue;
 
-  // Rentabilidade e evolução mensal: reais quando disponíveis, senão mock
-  const profitability = plotCosts ?? PLOT_PROFITABILITY;
+  // Rentabilidade e evolução mensal: reais quando disponíveis; mock só em modo demo
+  const profitability = plotCosts ?? (usingMock ? PLOT_PROFITABILITY : []);
   const monthlyData    = (() => {
     const real = buildMonthly(transactions);
-    return real.length ? real : MONTHLY_DATA;
+    return real.length ? real : (usingMock ? MONTHLY_DATA : []);
   })();
   const seasonName = seasons.find((s) => s.id === selectedSeasonId)?.name;
 
@@ -236,6 +244,11 @@ export function FinanceiroDashboard() {
           </div>
           <h1 className="text-2xl font-bold text-text-primary">Dashboard Financeiro</h1>
           <p className="text-text-muted text-sm mt-0.5">{seasonName ?? 'Safra atual'} — Fazenda Ouro Preto</p>
+          {usingMock && (
+            <span className="inline-block mt-2 px-2 py-0.5 rounded text-xs font-semibold bg-gold/15 text-gold border border-gold/30">
+              Dados de demonstração — backend indisponível
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -258,7 +271,7 @@ export function FinanceiroDashboard() {
       {/* ── KPI Row ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         <KPICard title="Custo Total"       value={`R$ ${(totalCost/1000).toFixed(0)}k`}  unit=""             subtitle="Insumos + Mão de obra"   icon={<DollarSign size={18} />} variant="default" />
-        <KPICard title="Custo / Saca"      value={`R$ ${costPerSack.toFixed(0)}`}         unit=""             subtitle={`${totalSacks} sacas`}  icon={<Target size={18} />}     variant="default" />
+        <KPICard title="Custo / Saca"      value={costPerSack != null ? `R$ ${costPerSack.toFixed(0)}` : '—'} unit="" subtitle={totalSacks > 0 ? `${totalSacks} sacas` : 'Sem produção lançada'}  icon={<Target size={18} />}     variant="default" />
         <KPICard title="Receita Total"     value={`R$ ${(revenue/1000).toFixed(0)}k`}     unit=""             subtitle="Vendas realizadas"       icon={<TrendingUp size={18} />} variant="positive" />
         <KPICard title="Lucro / Prejuízo"  value={`R$ ${(profit/1000).toFixed(0)}k`}      unit=""             subtitle={`Margem ${margin.toFixed(1)}%`} icon={profit >= 0 ? <TrendingUp size={18} /> : <TrendingDown size={18} />} variant={profit >= 0 ? 'positive' : 'negative'} accent={profit >= 0} />
         <KPICard title="Margem Líquida"    value={`${margin.toFixed(1)}`}                 unit="%"            subtitle="Sobre receita bruta"    icon={<BarChart3 size={18} />}  variant={margin >= 40 ? 'positive' : margin >= 20 ? 'gold' : 'negative'} />

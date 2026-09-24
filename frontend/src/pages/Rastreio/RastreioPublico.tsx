@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { QrCode, CheckCircle2, ChevronRight, Save } from 'lucide-react';
-import { trackingsApi } from '../../services/api';
+import { publicTrackingsApi } from '../../services/api';
 import type { CoffeeTracking, TrackingStage } from '../../types';
 import { STAGE_LABELS, STAGE_ORDER } from '../../types';
 import { clsx } from 'clsx';
@@ -22,7 +22,7 @@ export function RastreioPublico() {
       if (!code) return;
       try {
         setLoading(true);
-        const res = await trackingsApi.getByCode(code);
+        const res = await publicTrackingsApi.getByCode(code);
         setData(res.data);
       } catch (err: any) {
         setError('Rastreio não encontrado ou código inválido.');
@@ -47,7 +47,7 @@ export function RastreioPublico() {
     
     try {
       setSubmitting(true);
-      await trackingsApi.addEvent(data.id, {
+      await publicTrackingsApi.addEvent(data.id, {
         stage: selectedStage,
         notes: notes || undefined,
       });

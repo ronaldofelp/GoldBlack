@@ -101,6 +101,7 @@ export function VisaoGeral() {
   const [productions, setProductions] = useState<Production[]>([]);
   const [soil, setSoil]               = useState<any[]>([]);
   const [loading, setLoading]         = useState(true);
+  const [usingMock, setUsingMock]     = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -112,13 +113,14 @@ export function VisaoGeral() {
           alertsApi.list(undefined, false),
           activitiesApi.list(),
         ]);
-        if (p.data.length)  setPlots(p.data);
-        if (e.data.length)  setEstimates(e.data);
-        if (w.data.length)  setWeather(w.data);
-        if (a.data.length)  setAlerts(a.data);
-        if (ac.data.length) setActivities(ac.data);
+        // Sucesso manda: dados reais mesmo que vazios (não mascarar com mock).
+        setPlots(p.data);
+        setEstimates(e.data);
+        setWeather(w.data);
+        setAlerts(a.data);
+        setActivities(ac.data);
       } catch {
-        // silently use mock data
+        setUsingMock(true); // backend indisponível → dados de demonstração
       } finally {
         setLoading(false);
       }
@@ -181,7 +183,7 @@ export function VisaoGeral() {
   }));
 
   // Latest weather
-  const latestWeather = weather.sort((a, b) => b.log_date.localeCompare(a.log_date))[0];
+  const latestWeather = [...weather].sort((a, b) => b.log_date.localeCompare(a.log_date))[0];
 
   // Índices agronômicos — pH e matéria orgânica REAIS das análises de solo;
   // índice de produtividade calculado. Só entra o que tem fonte de dado.
@@ -217,6 +219,11 @@ export function VisaoGeral() {
           </div>
           <h1 className="text-2xl font-bold text-text-primary">Visão Geral das Lavouras</h1>
           <p className="text-text-muted text-sm mt-0.5">Safra 2025/2026 — Fazenda Ouro Preto</p>
+          {usingMock && (
+            <span className="inline-block mt-2 px-2 py-0.5 rounded text-xs font-semibold bg-gold/15 text-gold border border-gold/30">
+              Dados de demonstração — backend indisponível
+            </span>
+          )}
         </div>
         <button className="btn-secondary">
           <RefreshCw size={15} /> Atualizar
