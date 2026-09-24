@@ -510,6 +510,20 @@ class TrackingStage(str, enum.Enum):
     FINALIZADO = "FINALIZADO"
 
 
+# Ordem canônica das etapas — usada para validar transições no backend.
+STAGE_ORDER: list["TrackingStage"] = [
+    TrackingStage.COLHEITA,
+    TrackingStage.LAVADOR,
+    TrackingStage.TERREIRO,
+    TrackingStage.SECADOR,
+    TrackingStage.TULHA,
+    TrackingStage.BENEFICIAMENTO,
+    TrackingStage.CLASSIFICACAO,
+    TrackingStage.COMERCIALIZACAO,
+    TrackingStage.FINALIZADO,
+]
+
+
 class CoffeeTracking(Base):
     __tablename__ = "coffee_trackings"
 

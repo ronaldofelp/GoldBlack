@@ -66,7 +66,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # ─────────────────────────────────────────────────────────────────────────────
 _DEV_JWT_SECRET = "dev-secret-troque-em-producao-goldblack"
 _DEV_ENVS = {"development", "dev", "test", "testing", "local"}
-APP_ENV = os.getenv("APP_ENV", "development").lower()
+APP_ENV = os.getenv("APP_ENV", "production").lower()  # sem APP_ENV explícito = produção
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 # Deny-by-default: só cai no segredo de dev em ambientes reconhecidamente dev/test.
 # Qualquer outro valor de APP_ENV (staging, prod, typo...) exige segredo próprio.
@@ -1196,10 +1196,30 @@ def create_tracking_event(
 
     # Diferencia o operador logado de quem só escaneou o QR.
     principal = _optional_user(request, user_repo)
+
+    # FINALIZADO exige autenticação — verificar ANTES dos checks sequenciais para
+    # que o 403 tenha precedência sobre o 400 (semântica mais precisa para o cliente).
     if payload.stage == models.TrackingStage.FINALIZADO and principal is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Apenas usuários autenticados podem finalizar um rastreio.",
+        )
+
+    # Valida transição de etapa server-side (impede regressão e saltos não autorizados).
+    try:
+        current_idx = models.STAGE_ORDER.index(tracking.current_stage)
+        new_idx     = models.STAGE_ORDER.index(payload.stage)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Etapa inválida.")
+
+    if new_idx <= current_idx:
+        raise HTTPException(status_code=400, detail="Não é possível retroceder ou repetir uma etapa no rastreio.")
+
+    # Anônimos (QR público) só podem avançar UMA etapa de cada vez.
+    if principal is None and new_idx != current_idx + 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Avance apenas uma etapa por vez pelo QR público.",
         )
     # Ignora recorded_by do payload (impede falsificação de autoria).
     recorded_by = principal.name if principal else "Consumidor via QR"

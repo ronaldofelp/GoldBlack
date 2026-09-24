@@ -497,7 +497,7 @@ class CoffeeTrackingResponse(CoffeeTrackingListResponse):
 
 class TrackingEventCreate(OrmBase):
     stage: TrackingStage
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(None, max_length=2000)  # cap: rota pública de escrita
     recorded_by: Optional[str] = None
 
 
