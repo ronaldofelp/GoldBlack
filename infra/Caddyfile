@@ -1,0 +1,20 @@
+# GoldBlack — Caddy reverse proxy
+#
+# HTTP simples (enquanto não tiver domínio): acessa via IP na porta 80.
+# Para HTTPS com DuckDNS, substitua ":80" pelo domínio:
+#     seu-subdominio.duckdns.org {
+#
+# Caddy obtém e renova o certificado TLS automaticamente.
+
+:80 {
+    # /api/* → backend (remove o prefixo /api antes de repassar)
+    handle /api/* {
+        uri strip_prefix /api
+        reverse_proxy backend:8000
+    }
+
+    # Tudo mais → frontend (nginx serve o React SPA)
+    handle {
+        reverse_proxy frontend:80
+    }
+}

@@ -14,13 +14,10 @@ export const USER_KEY = '@GoldBlack:user';
 
 
 const getBaseUrl = () => {
-
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-
-    return `http://${window.location.hostname}:8000`;
-  }
-
-  return 'http://localhost:8000';
+  // Sempre usa o prefixo /api — o proxy (Vite em dev, Caddy em prod) roteia
+  // /api/* para o backend e tira o prefixo antes de repassar.
+  // Isso elimina a dependência de hostname:8000 fixo e funciona com HTTPS.
+  return '/api';
 };
 
 export const api = axios.create({
