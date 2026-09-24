@@ -1,18 +1,21 @@
 # docker-compose.prod.yml — produção na VM OCI
 #
 # Uso:
-#   docker compose -f docker-compose.prod.yml up -d
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 #
 # Pré-requisitos na VM:
 #   - Arquivo .env.prod com as variáveis abaixo (nunca commitar esse arquivo)
-#   - Wallet Oracle extraída em ~/goldblack/wallet/
-#   - docker login vinhedo.ocir.io  (auth token do OCIR)
+#   - Wallet Oracle extraída em algum diretório ABSOLUTO na VM
+#     (ex: /home/ubuntu/wallet) e WALLET_DIR apontando para esse caminho
+#     ⚠️  NÃO usar ~ nem caminhos relativos — o compose não os expande
+#   - docker login vcp.ocir.io  (auth token do OCIR)
 #
-# Variáveis obrigatórias no .env.prod:
-#   OCIR_NAMESPACE      → namespace do OCIR (ver OCI console → Tenancy → Object Storage Namespace)
-#   JWT_SECRET_KEY      → segredo forte (≥16 chars, alta entropia)
-#   ORACLE_DB_PASSWORD  → senha do ADMIN do ADB
+# Variáveis obrigatórias no .env.prod (ver .env.prod.example):
+#   OCIR_NAMESPACE        → namespace do OCIR (OCI console → Tenancy → Object Storage Namespace)
+#   JWT_SECRET_KEY        → segredo forte (≥32 chars, alta entropia)
+#   ORACLE_DB_PASSWORD    → senha do ADMIN do ADB
 #   ORACLE_WALLET_PASSWORD → senha da wallet
+#   WALLET_DIR            → caminho ABSOLUTO da wallet na VM (ex: /home/ubuntu/wallet)
 
 services:
   caddy:
@@ -23,7 +26,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
@@ -47,7 +50,8 @@ services:
       - ORACLE_WALLET_PASSWORD=${ORACLE_WALLET_PASSWORD}
     volumes:
       # wallet montada como read-only; nunca entra na imagem
-      - ${WALLET_DIR:-~/goldblack/wallet}:/app/wallet:ro
+      # WALLET_DIR deve ser caminho ABSOLUTO no host (ex: /home/ubuntu/wallet)
+      - ${WALLET_DIR}:/app/wallet:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
