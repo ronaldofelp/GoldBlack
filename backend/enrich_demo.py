@@ -23,6 +23,18 @@ BASE       = os.environ.get("BASE", "http://204.216.129.119")
 _API       = os.environ.get("API_PREFIX", "/api")   # "" se apontar direto ao backend:8000
 _TOKEN: str | None = None
 
+# Recusa enviar credenciais em HTTP puro para hosts não-locais.
+# Quando HTTPS estiver ativo, troque o BASE para https:// e este guard passa
+# automaticamente. Para usar em HTTP temporariamente (ex: antes do TLS):
+#   ALLOW_INSECURE=1 python enrich_demo.py
+_is_localhost = any(BASE.startswith(p) for p in ("http://localhost", "http://127.", "http://[::1]"))
+if BASE.startswith("http://") and not _is_localhost and not os.environ.get("ALLOW_INSECURE"):
+    sys.exit(
+        "ERRO: recusando enviar credenciais de admin em HTTP puro.\n"
+        "  → Quando HTTPS estiver ativo, use BASE=https://seu-dominio\n"
+        "  → Para forçar HTTP temporariamente: ALLOW_INSECURE=1 python enrich_demo.py"
+    )
+
 created = {}  # contadores por entidade
 
 
