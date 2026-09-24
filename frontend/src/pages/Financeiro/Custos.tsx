@@ -44,8 +44,8 @@ export function Custos() {
 
   return (
     <EntityPageLayout
-      title="Gestão de Custos"
-      description="Monitoramento detalhado das despesas operacionais"
+      title="Despesas Operacionais"
+      description="Despesas lançadas — insumos, mão de obra e manutenção"
       icon={<DollarSign size={24} />}
       data={data}
       loading={loading}

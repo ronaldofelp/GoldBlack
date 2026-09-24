@@ -23,7 +23,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard',     icon: <LayoutDashboard size={18} />, path: '/' },
+  { id: 'dashboard', label: 'Painel Geral',  icon: <LayoutDashboard size={18} />, path: '/' },
   { id: 'farms',     label: 'Propriedades',  icon: <Building2 size={18} />,       path: '/propriedades' },
   {
     id: 'lavouras', label: 'Lavouras', icon: <Leaf size={18} />, expanded: true,
@@ -55,7 +55,7 @@ const NAV_ITEMS: NavItem[] = [
     children: [
       { id: 'fin-dashboard', label: 'Dashboard',   icon: <BarChart3 size={16} />,   path: '/financeiro' },
       { id: 'fin-cashflow',  label: 'Fluxo de Caixa', icon: <LineChart size={16} />, path: '/financeiro/caixa' },
-      { id: 'fin-cost',      label: 'Custos',      icon: <DollarSign size={16} />,  path: '/financeiro/custos' },
+      { id: 'fin-cost',      label: 'Despesas',    icon: <DollarSign size={16} />,  path: '/financeiro/custos' },
     ],
   },
   {
