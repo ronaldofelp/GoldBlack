@@ -1,20 +1,26 @@
-name: CI — Testes do backend
+name: CI/CD — GoldBlack Coffee
 
-# Dispara em todo push e em pull requests para a main.
+# Testes: todo push e PR na main.
+# Deploy: apenas push direto na main (não em PRs), e só se os testes passarem.
 on:
   push:
     branches: ["main"]
   pull_request:
     branches: ["main"]
 
+env:
+  REGISTRY:  vcp.ocir.io
+  NAMESPACE: ax52rtggbppy
+
 jobs:
+  # ── Job 1: testes ────────────────────────────────────────────────────────────
   test:
     name: pytest (Python 3.12)
     runs-on: ubuntu-latest
 
     defaults:
       run:
-        working-directory: backend   # todos os steps rodam dentro de backend/
+        working-directory: backend
 
     steps:
       - name: Checkout do código
@@ -32,5 +38,68 @@ jobs:
 
       - name: Rodar testes
         run: pytest tests/ -v --tb=short
-        # APP_ENV=test já é setado pelo conftest.py antes de qualquer import.
-        # Os testes usam SQLite em memória — sem Oracle, sem wallet, sem segredos.
+        # APP_ENV=test setado pelo conftest.py — sem Oracle, sem wallet, sem segredos.
+
+  # ── Job 2: build + deploy ────────────────────────────────────────────────────
+  deploy:
+    name: Build e deploy na VM OCI
+    runs-on: ubuntu-latest
+    needs: test                          # só executa se os testes passarem
+    if: github.event_name == 'push'      # nunca roda em PRs — só em push direto
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login no OCIR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.OCIR_USER }}
+          password: ${{ secrets.OCIR_TOKEN }}
+
+      - name: Build e push — backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/goldblack-backend:latest
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max   # cache de camadas entre runs (acelera builds)
+
+      - name: Build e push — frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/goldblack-frontend:latest
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+      - name: Deploy na VM
+        uses: appleboy/ssh-action@v1
+        with:
+          host:     ${{ secrets.VM_HOST }}
+          username: ubuntu
+          key:      ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: OCIR_USER,OCIR_TOKEN,REGISTRY,NAMESPACE
+          script: |
+            # Re-autentica no OCIR para garantir que o pull funciona
+            echo "$OCIR_TOKEN" | sudo docker login "$REGISTRY" \
+              --username "$OCIR_USER" --password-stdin
+
+            cd ~/goldblack
+
+            # Baixa as imagens novas e recria os containers afetados
+            sudo docker compose -f docker-compose.prod.yml --env-file .env.prod pull
+            sudo docker compose -f docker-compose.prod.yml --env-file .env.prod \
+              up -d --force-recreate
+
+            # Remove imagens antigas para não encher o disco
+            sudo docker image prune -f
+        env:
+          OCIR_USER:  ${{ secrets.OCIR_USER }}
+          OCIR_TOKEN: ${{ secrets.OCIR_TOKEN }}
