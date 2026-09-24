@@ -9,7 +9,10 @@ import {
 // Gera um CSV compatível com Excel pt-BR: separador ';' e BOM UTF-8 (acentos ok).
 function downloadCsv(filename: string, headers: string[], rows: (string | number | null | undefined)[][]) {
   const esc = (v: string | number | null | undefined) => {
-    const s = v == null ? '' : String(v);
+    let s = v == null ? '' : String(v);
+    // Anti CSV formula injection: célula que começa com gatilho de fórmula
+    // (= + - @, tab, CR) é prefixada com ' para o Excel/Sheets tratar como texto.
+    if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
     return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   const content = [headers, ...rows].map((r) => r.map(esc).join(';')).join('\r\n');
