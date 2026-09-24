@@ -1,196 +1,185 @@
 # GoldBlack Coffee Platform
 
-Plataforma completa de rastreabilidade e gestão agrícola do café, composta por uma **API RESTful** (FastAPI + SQLAlchemy) e um **frontend web** (React + Vite + TypeScript).
+ERP de gestão e rastreabilidade para produtores de café — **em produção** em https://goldblackcoffee.duckdns.org.
+
+Conecta o que acontece na lavoura com quanto custou por saca e prova a procedência do café via QR Code.
+
+**Stack:** React 19 + FastAPI + Oracle Autonomous Database 19c · **Infra:** OCI (VM + ADB + OCIR) · **CI/CD:** GitHub Actions
 
 ---
 
-##  Arquitetura
+## Funcionalidades principais
+
+| Domínio | O que faz |
+|---------|-----------|
+| **Gestão agrícola** | Propriedades, talhões, atividades, solo, clima, estimativas de safra |
+| **Motor de custo** | Insumos + mão de obra + hora-máquina por atividade → **custo/ha e custo/saca** por talhão × safra |
+| **Rastreabilidade QR** | Lote `GB-AAAA-XXXX`, 9 etapas (colheita → finalizado), página pública sem login para o consumidor |
+| **Financeiro / Estoque / Vendas** | Transações, fluxo de caixa, controle de insumos |
+| **Usuários e acesso** | JWT (HS256 · 12h), papéis ADMIN / OPERATOR, RBAC nos endpoints |
+
+---
+
+## Arquitetura
 
 ```
-Ch/
-├── docker-compose.yml        # Orquestra front + back com um único comando
+GoldBlack/
+├── .github/workflows/ci.yml   # CI/CD: pytest (gate) → build/push OCIR → deploy VM
+├── docker-compose.yml         # Orquestra Caddy + backend + frontend
 ├── backend/
 │   ├── app/
-│   │   ├── database.py       # Engine SQLite/Oracle + get_db
-│   │   ├── models.py         # SQLAlchemy ORM (20 tabelas)
-│   │   ├── schemas.py        # Pydantic v2 (validação entrada/saída)
-│   │   ├── repositories.py   # Interfaces ABC + implementações SQLAlchemy
-│   │   ├── dependencies.py   # FastAPI Depends — ponto de wiring único (DIP)
-│   │   └── main.py           # Routers + endpoints
-│   ├── mock_data.py          # Seed de dados de exemplo
-│   ├── requirements.txt
+│   │   ├── main.py            # Auth + routers + guarda global JWT
+│   │   ├── cost_router.py     # Endpoints do motor de custo
+│   │   ├── services/
+│   │   │   └── costing.py     # Cálculo custo/ha e custo/saca (Decimal, selectinload)
+│   │   ├── models.py          # SQLAlchemy ORM — 29 tabelas
+│   │   ├── schemas.py         # Pydantic v2
+│   │   ├── repositories.py    # Repository pattern (DIP) — interfaces ABC + implementações
+│   │   ├── dependencies.py    # FastAPI Depends — ponto de wiring único
+│   │   └── database.py        # Engine Oracle (prod) / SQLite (dev/test)
+│   ├── alembic/               # Migrações de schema (baseline 29 tabelas + índices)
+│   ├── tests/                 # 30 testes pytest — SQLite em memória, sem Oracle
+│   ├── create_admin.py        # Bootstrap do 1º ADMIN em produção
 │   └── Dockerfile
 └── frontend/
     ├── src/
-    ├── Dockerfile            # Multi-stage: Node build → nginx serve
+    │   ├── pages/             # Lavouras, Custo, Rastreio, Financeiro, Usuários…
+    │   ├── services/api.ts    # Ponto único de acesso à API (axios)
+    │   └── types/index.ts     # Tipos TypeScript compartilhados
+    ├── Dockerfile             # Multi-stage: Node (build Vite) → nginx (servir estático)
     └── nginx.conf
 ```
 
 ### Princípio aplicado: DIP (Dependency Inversion Principle)
 
 ```
-Endpoints → IRepository (interface)
-               ↑ Depends()
-         dependencies.py
-               ↓
-    SQLAlchemyXRepository (implementação)
+Endpoints → IRepository (interface ABC)
+                ↑ Depends()
+          dependencies.py
+                ↓
+   SQLAlchemyXRepository (implementação)
 ```
 
-Os endpoints **nunca** importam SQLAlchemy diretamente. Para migrar para Oracle, basta:
-1. Alterar `DATABASE_URL` em `database.py`
-2. Trocar as implementações em `dependencies.py`
+Os endpoints nunca importam SQLAlchemy diretamente. Foi esse desacoplamento que permitiu migrar de SQLite para Oracle sem tocar na regra de negócio.
 
 ---
 
-## Execução via Docker (recomendado)
+## Desenvolvimento local
 
-> **Pré-requisito**: [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado e em execução.
+### Pré-requisitos
 
-```bash
-
-docker compose up --build
-```
-
-Aguarde o build e o healthcheck. Quando estiver pronto:
-
-| Serviço | URL |
-|---|---|
-|  Frontend | http://localhost:3000 |
-|  API Backend | http://localhost:8000 |
-|  Swagger UI | http://localhost:8000/docs |
-|  ReDoc | http://localhost:8000/redoc |
-
-### Comandos úteis
-
-```bash
-
-docker compose up --build -d
-
-
-docker compose logs -f
-
-
-docker compose down
-
-
-docker compose down -v
-
-
-docker compose up --build backend
-```
-
-> **Nota**: o banco SQLite persiste no volume Docker `db_data`. Os dados de exemplo são gerados automaticamente na primeira inicialização.
-
----
-
-## Execução local (sem Docker)
+- Python 3.12+ e Node.js 20+
+- Docker ou Podman (opcional, para rodar tudo junto)
 
 ### Backend
 
 ```bash
 cd backend
 
-
 python -m venv .venv
-.venv\Scripts\activate          
- source .venv/bin/activate     
-
+source .venv/bin/activate        # Linux/Mac/Git Bash
+# .venv\Scripts\activate         # Windows cmd
 
 pip install -r requirements.txt
 
-
-uvicorn app.main:app --reload
+# Sobe com SQLite em memória (sem Oracle, sem wallet)
+APP_ENV=development uvicorn app.main:app --reload
 ```
+
+> Em `APP_ENV=development` o schema é criado automaticamente via `create_all` e um seed de demonstração é populado. Em produção, o schema é gerenciado exclusivamente pelo Alembic.
 
 ### Frontend
 
 ```bash
 cd frontend
-
-
 npm install
-
-
 npm run dev
 ```
 
-> **Nota**: o Vite sobe por padrão na porta **5173** (ou outra porta disponível). A URL exata é exibida no terminal após o comando `npm run dev`. Caso queira acessar via domínio fixo, utilize a execução via Docker (porta 3000).
+O Vite sobe na porta **5173** por padrão. O proxy `/api → http://localhost:8000` já está configurado em `vite.config.ts`.
+
+### Com Docker Compose (dev)
+
+```bash
+docker compose up --build
+```
+
+| Serviço | URL |
+|---------|-----|
+| Frontend | http://localhost:3000 |
+| Backend / Swagger | http://localhost:8000/docs |
 
 ---
 
-##  Testes
-
-### Backend
+## Testes
 
 ```bash
 cd backend
-.venv\Scripts\python.exe -m pytest tests/ -v   
- python -m pytest tests/ -v                   
+python -m pytest tests/ -v
 ```
 
-### Frontend
+30 testes de integração rodando em **SQLite em memória** — sem Oracle, sem wallet, sem variáveis de ambiente extras. São o gate do pipeline de CI: nenhum deploy acontece se um teste falhar.
+
+---
+
+## CI/CD
+
+Push na `main` → **GitHub Actions** (`.github/workflows/ci.yml`):
+
+1. **Job `test`** — pytest no runner (SQLite, sem segredos). Gate obrigatório.
+2. **Job `deploy`** (só após test OK, só em `push`, nunca em PR):
+   - Build das imagens no runner (fora da VM — evita OOM).
+   - Push para OCIR (`vcp.ocir.io/ax52rtggbppy`).
+   - SSH na VM → `docker compose pull` + `up -d --force-recreate`.
+
+Todas as actions são pinadas por SHA de commit (hardening de supply chain).
+
+---
+
+## Produção
+
+| Item | Valor |
+|------|-------|
+| URL | https://goldblackcoffee.duckdns.org |
+| VM | OCI VM.Standard.E5.Flex · 1 OCPU / 8 GB · Ubuntu 22.04 · sa-vinhedo-1 |
+| Banco | Oracle Autonomous Database 19c (Always Free) · mTLS/wallet |
+| Proxy | Caddy 2 · HTTPS automático (Let's Encrypt) · HSTS · HTTP/3 |
+| Imagens | OCIR `vcp.ocir.io/ax52rtggbppy/goldblack-{backend,frontend}:latest` |
+
+### Operações de schema (quando há mudança de modelo)
 
 ```bash
-cd frontend
-npm run test
+# Na VM, após o deploy:
+alembic upgrade head
+python create_admin.py   # somente no primeiro deploy
 ```
 
 ---
 
-##  Endpoints disponíveis
+## Variáveis de ambiente (produção)
 
-| Domínio               | Prefixo                    | Métodos          |
-|-----------------------|----------------------------|------------------|
-| Usuários              | `/users`                   | GET, POST, PATCH, DELETE |
-| Propriedades          | `/farms`                   | GET, POST, PATCH, DELETE |
-| Talhões               | `/plots`                   | GET, POST, PATCH, DELETE |
-| Análises de Solo      | `/soil-analyses`           | GET, POST, PATCH, DELETE |
-| Recomendações Técnicas| `/recommendations`         | GET, POST, PATCH, DELETE |
-| Estimativas de Safra  | `/harvest-estimates`       | GET, POST, PATCH, DELETE |
-| Registros Climáticos  | `/weather-logs`            | GET, POST, PATCH, DELETE |
-| Alertas do Sistema    | `/alerts`                  | GET, POST, PATCH, DELETE |
-| Insumos Agrícolas     | `/supplies`                | GET, POST, PATCH, DELETE |
-| Atividades Agrícolas  | `/activities`              | GET, POST, PATCH, DELETE |
-| Lotes Rastreabilidade | `/batches`                 | GET, POST, PATCH, DELETE |
-| Fase Lavador          | `/batches/{id}/phases/washer`     | GET, POST, DELETE |
-| Fase Terreiro         | `/batches/{id}/phases/patio`      | GET, POST, PATCH, DELETE |
-| Fase Secador          | `/batches/{id}/phases/dryer`      | GET, POST, PATCH, DELETE |
-| Fase Tulha/Silo       | `/batches/{id}/phases/silo`       | GET, POST, PATCH, DELETE |
-| Beneficiamento        | `/batches/{id}/phases/processing` | GET, POST, PATCH, DELETE |
-| Comercialização       | `/sales`                   | GET, POST, PATCH, DELETE |
-| Financeiro            | `/transactions`            | GET, POST, PATCH, DELETE |
-| Health Check          | `/health`                  | GET |
+Configuradas em `.env.prod` na VM (fora do repositório). Nunca commitar segredos.
+
+| Variável | Descrição |
+|----------|-----------|
+| `APP_ENV` | `production` |
+| `JWT_SECRET_KEY` | Chave forte (≥ 32 chars). App recusa subir sem ela em prod. |
+| `ORACLE_DB_USER / PASSWORD / DSN` | Credenciais do ADB |
+| `ORACLE_WALLET_DIR / PASSWORD` | Caminho absoluto da wallet + senha |
 
 ---
 
-##  Migração para Oracle
+## Dependências principais
 
-```python
-
-DATABASE_URL = "oracle+oracledb://user:senha@host:1521/?service_name=ORCL"
-
-# Remova também o argumento connect_args (exclusivo do SQLite):
-engine = create_engine(DATABASE_URL)
-```
-
-Em `dependencies.py`, substitua `SQLAlchemyXRepository` por `OracleXRepository` quando implementado.
-
----
-
-## Banco de dados
-
-O arquivo `goldblack_coffee.db` (SQLite) é criado automaticamente ao iniciar a aplicação. Os dados de exemplo são populados automaticamente se o banco estiver vazio.
-
----
-
-##  Dependências principais
-
-| Pacote | Versão | Uso |
-|--------|--------|-----|
-| fastapi | 0.115 | Framework web |
-| uvicorn | 0.30 | Servidor ASGI |
-| sqlalchemy | 2.0 | ORM |
-| pydantic | 2.9 | Validação de dados |
-| passlib[bcrypt] | 1.7 | Hash de senhas |
-| react | 19 | UI framework |
-| vite | 5 | Bundler frontend |
+| Pacote | Uso |
+|--------|-----|
+| `fastapi 0.115` | Framework web |
+| `uvicorn` | Servidor ASGI |
+| `sqlalchemy 2.0` | ORM |
+| `python-oracledb` | Driver Oracle (thin mode — sem Oracle Client) |
+| `alembic` | Migrações de schema |
+| `python-jose[cryptography]` | JWT (HS256) |
+| `passlib[bcrypt]` | Hash de senhas |
+| `pydantic 2.9` | Validação de dados |
+| `react 19` + `vite 5` | Frontend SPA |
+| `tailwindcss` | Estilização |
