@@ -29,6 +29,7 @@ import { Compras } from './pages/Compras';
 import { Monitoramento } from './pages/Lavouras/Monitoramento';
 import { Relatorios } from './pages/Relatorios';
 import { Configuracoes } from './pages/Configuracoes';
+import { Usuarios } from './pages/Usuarios';
 import {
   PainelCusto, Safras, ProducaoSacas, Maquinas, Trabalhadores, Servicos,
 } from './pages/Custo';
@@ -100,6 +101,7 @@ export default function App() {
           
           <Route path="/relatorios"     element={<Relatorios />} />
           <Route path="/configuracoes"  element={<Configuracoes />} />
+          <Route path="/usuarios"       element={<Usuarios />} />
 
           <Route path="*"               element={<NotFound />} />
         </Route>

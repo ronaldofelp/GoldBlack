@@ -6,7 +6,7 @@ import type {
   Season, Production, Machine, Worker, ServiceDefinition, PlotVariety,
   ActivitySupply, MachineUsage, LaborEntry,
   ActivityCostBreakdown, PlotSeasonCost,
-  LoginResponse, AuthUser,
+  LoginResponse, AuthUser, User, UserRole,
 } from '../types';
 
 export const TOKEN_KEY = '@GoldBlack:token';
@@ -84,6 +84,17 @@ export const authApi = {
   login: (email: string, password: string) =>
     api.post<LoginResponse>('/auth/login', { email, password }),
   me: () => api.get<AuthUser>('/auth/me'),
+};
+
+// Gestão de usuários (somente ADMIN no backend, via require_admin)
+export const usersApi = {
+  list: (skip = 0, limit = 100) =>
+    api.get<User[]>('/users', { params: { skip, limit } }),
+  create: (data: { name: string; email: string; password: string; role: UserRole }) =>
+    api.post<User>('/users', data),
+  update: (id: string, data: Partial<{ name: string; email: string; role: UserRole }>) =>
+    api.patch<User>(`/users/${id}`, data),
+  delete: (id: string) => api.delete(`/users/${id}`),
 };
 
 export const plotsApi = {

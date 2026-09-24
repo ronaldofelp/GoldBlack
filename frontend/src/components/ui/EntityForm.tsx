@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { clsx } from 'clsx';
 import { Loader2 } from 'lucide-react';
 
-export type FieldType = 'text' | 'number' | 'date' | 'select' | 'boolean';
+export type FieldType = 'text' | 'number' | 'date' | 'select' | 'boolean' | 'password';
 
 export interface FieldOption {
   value: string | number;
@@ -104,8 +104,9 @@ export function EntityForm({ fields, onSubmit, onCancel, submitLabel = 'Salvar' 
               </div>
             ) : (
               <input
-                type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : field.type === 'password' ? 'password' : 'text'}
                 step={field.type === 'number' ? 'any' : undefined}
+                autoComplete={field.type === 'password' ? 'new-password' : undefined}
                 className="input-base"
                 value={formData[field.name]}
                 onChange={(e) => handleChange(field.name, e.target.value)}

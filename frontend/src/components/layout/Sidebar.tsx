@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard, Building2, Leaf, ChevronRight, ChevronDown, ChevronLeft,
   FlaskConical, ShoppingCart, Warehouse, DollarSign, BarChart3,
@@ -20,6 +21,7 @@ interface NavItem {
   path?: string;
   children?: NavItem[];
   expanded?: boolean;
+  adminOnly?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -71,6 +73,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   { id: 'vendas',     label: 'Vendas',       icon: <PackageSearch size={18} />,   path: '/vendas' },
   { id: 'relatorios', label: 'Relatórios',   icon: <BarChart3 size={18} />,       path: '/relatorios' },
+  { id: 'usuarios',   label: 'Usuários',     icon: <Users size={18} />,           path: '/usuarios', adminOnly: true },
   { id: 'config',     label: 'Configurações',icon: <Settings size={18} />,        path: '/configuracoes' },
 ];
 
@@ -85,6 +88,9 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
+  const navItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     lavouras: true,
     financeiro: false,
@@ -120,7 +126,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Navegação */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const hasChildren = !!item.children?.length;
           const isOpen = expanded[item.id];
           const groupActive = isGroupActive(item);
