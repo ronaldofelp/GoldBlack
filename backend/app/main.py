@@ -39,8 +39,17 @@ from .database import SessionLocal, engine
 
 models.Base.metadata.create_all(bind=engine)
 
+_DEV_JWT_SECRET = "dev-secret-troque-em-producao-goldblack"
+_DEV_ENVS = {"development", "dev", "test", "testing", "local"}
+APP_ENV = os.getenv("APP_ENV", "production").lower()  # sem APP_ENV explícito = produção
+
 
 def _auto_seed():
+    # Deny-by-default: o seed cria usuários com senhas conhecidas (mock_data).
+    # NUNCA pode rodar fora de dev/test — num banco de produção vazio isso
+    # abriria uma conta ADMIN com credencial pública. Só semeia em dev/test.
+    if APP_ENV not in _DEV_ENVS:
+        return
     db = SessionLocal()
     try:
         if db.query(models.User).count() == 0:
@@ -64,9 +73,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # ─────────────────────────────────────────────────────────────────────────────
 # Autenticação (JWT stateless)
 # ─────────────────────────────────────────────────────────────────────────────
-_DEV_JWT_SECRET = "dev-secret-troque-em-producao-goldblack"
-_DEV_ENVS = {"development", "dev", "test", "testing", "local"}
-APP_ENV = os.getenv("APP_ENV", "production").lower()  # sem APP_ENV explícito = produção
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 # Deny-by-default: só cai no segredo de dev em ambientes reconhecidamente dev/test.
 # Qualquer outro valor de APP_ENV (staging, prod, typo...) exige segredo próprio.
@@ -254,14 +260,19 @@ def list_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     repo: Annotated[IUserRepository, Depends(get_user_repo)] = None,
+    _admin: Annotated[models.User, Depends(require_admin)] = None,
 ):
-    """Lista todos os usuários com paginação."""
+    """Lista todos os usuários com paginação. Restrito a ADMIN."""
     return repo.list_all(skip=skip, limit=limit)
 
 
 @app.get("/users/{user_id}", response_model=schemas.UserResponse, tags=["Usuários"])
-def get_user(user_id: str, repo: Annotated[IUserRepository, Depends(get_user_repo)]):
-    """Retorna um usuário pelo ID."""
+def get_user(
+    user_id: str,
+    repo: Annotated[IUserRepository, Depends(get_user_repo)],
+    _admin: Annotated[models.User, Depends(require_admin)],
+):
+    """Retorna um usuário pelo ID. Restrito a ADMIN."""
     user = repo.get_by_id(user_id)
     if not user:
         _404("Usuário", user_id)

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, date
 from sqlalchemy import (
     String, Integer, Numeric, Boolean, Text, Date, DateTime,
-    ForeignKey, Enum as SAEnum, UniqueConstraint
+    ForeignKey, Enum as SAEnum, UniqueConstraint, Index
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import enum
@@ -311,6 +311,10 @@ class AgriculturalSupply(Base):
 
 class AgriculturalActivity(Base):
     __tablename__ = "agricultural_activities"
+    # Índice composto no eixo do motor de custo (talhão × safra), o filtro central.
+    __table_args__ = (
+        Index("ix_activities_plot_season", "plot_id", "season_id"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     plot_id: Mapped[str] = mapped_column(String(36), ForeignKey("plots.id"), nullable=False)
@@ -353,7 +357,7 @@ class MachineUsage(Base):
     __tablename__ = "machine_usages"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    activity_id: Mapped[str] = mapped_column(String(36), ForeignKey("agricultural_activities.id"), nullable=False)
+    activity_id: Mapped[str] = mapped_column(String(36), ForeignKey("agricultural_activities.id"), nullable=False, index=True)
     machine_id: Mapped[str] = mapped_column(String(36), ForeignKey("machines.id"), nullable=False)
     hours: Mapped[float] = mapped_column(Numeric(8, 2), nullable=False)
 
@@ -369,7 +373,7 @@ class LaborEntry(Base):
     __tablename__ = "labor_entries"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    activity_id: Mapped[str] = mapped_column(String(36), ForeignKey("agricultural_activities.id"), nullable=False)
+    activity_id: Mapped[str] = mapped_column(String(36), ForeignKey("agricultural_activities.id"), nullable=False, index=True)
     labor_type: Mapped[LaborType] = mapped_column(SAEnum(LaborType), nullable=False)
     worker_id: Mapped[str] = mapped_column(String(36), ForeignKey("workers.id"), nullable=True)
     service_definition_id: Mapped[str] = mapped_column(String(36), ForeignKey("service_definitions.id"), nullable=True)
@@ -482,7 +486,7 @@ class FinancialTransaction(Base):
     __tablename__ = "financial_transactions"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    farm_id: Mapped[str] = mapped_column(String(36), ForeignKey("farms.id"), nullable=False)
+    farm_id: Mapped[str] = mapped_column(String(36), ForeignKey("farms.id"), nullable=False, index=True)
     type: Mapped[TransactionType] = mapped_column(SAEnum(TransactionType), nullable=False)
     category: Mapped[TransactionCategory] = mapped_column(SAEnum(TransactionCategory), nullable=False)
     amount: Mapped[float] = mapped_column(Numeric(15, 2), nullable=False)
@@ -545,7 +549,7 @@ class TrackingEvent(Base):
     __tablename__ = "tracking_events"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    tracking_id: Mapped[str] = mapped_column(String(36), ForeignKey("coffee_trackings.id"), nullable=False)
+    tracking_id: Mapped[str] = mapped_column(String(36), ForeignKey("coffee_trackings.id"), nullable=False, index=True)
     stage: Mapped[TrackingStage] = mapped_column(SAEnum(TrackingStage), nullable=False)
     notes: Mapped[str] = mapped_column(Text, nullable=True)
     recorded_by: Mapped[str] = mapped_column(String(255), nullable=True)

@@ -394,12 +394,30 @@ def add_labor_entry(
     payload: schemas.LaborEntryCreate,
     activity_repo: Annotated[IActivityRepository, Depends(get_activity_repo)],
     repo: Annotated[SQLAlchemyLaborEntryRepository, Depends(get_labor_entry_repo)],
+    worker_repo: Annotated[SQLAlchemyWorkerRepository, Depends(get_worker_repo)],
+    sd_repo: Annotated[SQLAlchemyServiceDefinitionRepository, Depends(get_service_definition_repo)],
 ):
     _require_activity(activity_repo, activity_id)
     if payload.labor_type == models.LaborType.DIARIA and not (payload.worker_id or payload.unit_value):
         raise HTTPException(status_code=422, detail="DIARIA exige worker_id (p/ usar a diária) ou unit_value.")
     if payload.labor_type == models.LaborType.SERVICO and not (payload.service_definition_id or payload.unit_value):
         raise HTTPException(status_code=422, detail="SERVICO exige service_definition_id ou unit_value.")
+    # Se a taxa não veio explícita (unit_value), a referência PRECISA existir e ter
+    # valor — senão o custo entraria como zero silencioso e subestimaria custo/saca.
+    if payload.unit_value is None:
+        if payload.labor_type == models.LaborType.DIARIA:
+            worker = worker_repo.get_by_id(payload.worker_id)
+            if not worker:
+                _404("Trabalhador", payload.worker_id)
+            if worker.daily_rate is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Trabalhador sem diária (daily_rate) cadastrada: informe unit_value ou defina a diária do trabalhador.",
+                )
+        elif payload.labor_type == models.LaborType.SERVICO:
+            sd = sd_repo.get_by_id(payload.service_definition_id)
+            if not sd:
+                _404("Definição de serviço", payload.service_definition_id)
     obj = models.LaborEntry(id=str(uuid.uuid4()), activity_id=activity_id, **payload.model_dump())
     return repo.create(obj)
 

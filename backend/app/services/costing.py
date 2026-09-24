@@ -16,7 +16,7 @@ from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from .. import models
 
@@ -87,6 +87,14 @@ def plot_season_cost(db: Session, plot: models.Plot, season: models.Season) -> d
         .filter(
             models.AgriculturalActivity.plot_id == plot.id,
             models.AgriculturalActivity.season_id == season.id,
+        )
+        .options(
+            # Eager loading: evita N+1 ao percorrer os lançamentos de cada atividade
+            # (crítico no Oracle, onde cada query lazy paga latência de rede).
+            selectinload(models.AgriculturalActivity.activity_supplies),
+            selectinload(models.AgriculturalActivity.labor_entries).selectinload(models.LaborEntry.worker),
+            selectinload(models.AgriculturalActivity.labor_entries).selectinload(models.LaborEntry.service_definition),
+            selectinload(models.AgriculturalActivity.machine_usages).selectinload(models.MachineUsage.machine),
         )
         .all()
     )
