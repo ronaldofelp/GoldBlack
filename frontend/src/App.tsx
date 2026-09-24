@@ -29,6 +29,9 @@ import { Compras } from './pages/Compras';
 import { Monitoramento } from './pages/Lavouras/Monitoramento';
 import { Relatorios } from './pages/Relatorios';
 import { Configuracoes } from './pages/Configuracoes';
+import {
+  PainelCusto, Safras, ProducaoSacas, Maquinas, Trabalhadores, Servicos,
+} from './pages/Custo';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -86,6 +89,14 @@ export default function App() {
           <Route path="/financeiro"       element={<FinanceiroDashboard />} />
           <Route path="/financeiro/caixa" element={<FluxoCaixa />} />
           <Route path="/financeiro/custos" element={<Custos />} />
+
+          {/* Custo (talhão × safra) */}
+          <Route path="/custo"               element={<PainelCusto />} />
+          <Route path="/custo/safras"        element={<Safras />} />
+          <Route path="/custo/producao"      element={<ProducaoSacas />} />
+          <Route path="/custo/maquinas"      element={<Maquinas />} />
+          <Route path="/custo/trabalhadores" element={<Trabalhadores />} />
+          <Route path="/custo/servicos"      element={<Servicos />} />
           
           <Route path="/relatorios"     element={<Relatorios />} />
           <Route path="/configuracoes"  element={<Configuracoes />} />

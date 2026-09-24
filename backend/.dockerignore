@@ -1,4 +1,6 @@
 .venv
+.venv-check
+.venv-spike
 __pycache__
 *.pyc
 *.pyo

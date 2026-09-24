@@ -725,3 +725,139 @@ class SQLAlchemyTrackingEventRepository(ITrackingEventRepository):
         self.db.refresh(entity)
         return entity
 
+
+# ── Domínio de Custo ─────────────────────────────────────────────────────────
+# Base CRUD genérica: elimina a repetição de get/list/create/update/delete que
+# os repositórios acima trazem um a um. Cada repo novo só declara o `model` e os
+# filtros específicos. (Retrofit dos repos antigos p/ esta base = follow-up.)
+
+ModelT = TypeVar("ModelT")
+
+
+class SQLAlchemyCRUDRepository(Generic[ModelT]):
+    model: type = None
+
+    def __init__(self, db: Session):
+        self.db = db
+
+    def get_by_id(self, entity_id: str) -> Optional[ModelT]:
+        return self.db.get(self.model, entity_id)
+
+    def list_all(self, skip: int = 0, limit: int = 100) -> list[ModelT]:
+        return self.db.query(self.model).offset(skip).limit(limit).all()
+
+    def create(self, entity: ModelT) -> ModelT:
+        self.db.add(entity)
+        self.db.commit()
+        self.db.refresh(entity)
+        return entity
+
+    def update(self, entity: ModelT) -> ModelT:
+        self.db.commit()
+        self.db.refresh(entity)
+        return entity
+
+    def delete(self, entity_id: str) -> bool:
+        obj = self.get_by_id(entity_id)
+        if not obj:
+            return False
+        self.db.delete(obj)
+        self.db.commit()
+        return True
+
+
+class SQLAlchemySeasonRepository(SQLAlchemyCRUDRepository[models.Season]):
+    model = models.Season
+
+    def get_by_name(self, name: str) -> Optional[models.Season]:
+        return self.db.query(models.Season).filter(models.Season.name == name).first()
+
+
+class SQLAlchemyPlotVarietyRepository(SQLAlchemyCRUDRepository[models.PlotVariety]):
+    model = models.PlotVariety
+
+    def list_by_plot(self, plot_id: str) -> list[models.PlotVariety]:
+        return self.db.query(models.PlotVariety).filter(models.PlotVariety.plot_id == plot_id).all()
+
+
+class SQLAlchemyProductionRepository(SQLAlchemyCRUDRepository[models.Production]):
+    model = models.Production
+
+    def list_by_plot(self, plot_id: str) -> list[models.Production]:
+        return self.db.query(models.Production).filter(models.Production.plot_id == plot_id).all()
+
+    def get_by_plot_season(self, plot_id: str, season_id: str) -> Optional[models.Production]:
+        return self.db.query(models.Production).filter(
+            models.Production.plot_id == plot_id,
+            models.Production.season_id == season_id,
+        ).first()
+
+
+class SQLAlchemyMachineRepository(SQLAlchemyCRUDRepository[models.Machine]):
+    model = models.Machine
+
+    def list_by_farm(self, farm_id: str) -> list[models.Machine]:
+        return self.db.query(models.Machine).filter(models.Machine.farm_id == farm_id).all()
+
+
+class SQLAlchemyWorkerRepository(SQLAlchemyCRUDRepository[models.Worker]):
+    model = models.Worker
+
+    def list_by_farm(self, farm_id: str) -> list[models.Worker]:
+        return self.db.query(models.Worker).filter(models.Worker.farm_id == farm_id).all()
+
+
+class SQLAlchemyServiceDefinitionRepository(SQLAlchemyCRUDRepository[models.ServiceDefinition]):
+    model = models.ServiceDefinition
+
+    def list_by_farm(self, farm_id: str) -> list[models.ServiceDefinition]:
+        return self.db.query(models.ServiceDefinition).filter(
+            models.ServiceDefinition.farm_id == farm_id
+        ).all()
+
+
+class SQLAlchemyMachineUsageRepository(SQLAlchemyCRUDRepository[models.MachineUsage]):
+    model = models.MachineUsage
+
+    def list_by_activity(self, activity_id: str) -> list[models.MachineUsage]:
+        return self.db.query(models.MachineUsage).filter(
+            models.MachineUsage.activity_id == activity_id
+        ).all()
+
+
+class SQLAlchemyLaborEntryRepository(SQLAlchemyCRUDRepository[models.LaborEntry]):
+    model = models.LaborEntry
+
+    def list_by_activity(self, activity_id: str) -> list[models.LaborEntry]:
+        return self.db.query(models.LaborEntry).filter(
+            models.LaborEntry.activity_id == activity_id
+        ).all()
+
+
+class SQLAlchemyActivitySupplyRepository:
+    """ActivitySupply tem PK composta (activity_id, supply_id) — não usa a base genérica."""
+    def __init__(self, db: Session):
+        self.db = db
+
+    def list_by_activity(self, activity_id: str) -> list[models.ActivitySupply]:
+        return self.db.query(models.ActivitySupply).filter(
+            models.ActivitySupply.activity_id == activity_id
+        ).all()
+
+    def get(self, activity_id: str, supply_id: str) -> Optional[models.ActivitySupply]:
+        return self.db.get(models.ActivitySupply, (activity_id, supply_id))
+
+    def create(self, entity: models.ActivitySupply) -> models.ActivitySupply:
+        self.db.add(entity)
+        self.db.commit()
+        self.db.refresh(entity)
+        return entity
+
+    def delete(self, activity_id: str, supply_id: str) -> bool:
+        obj = self.get(activity_id, supply_id)
+        if not obj:
+            return False
+        self.db.delete(obj)
+        self.db.commit()
+        return True
+

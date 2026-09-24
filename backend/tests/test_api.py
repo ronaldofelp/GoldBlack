@@ -4,6 +4,12 @@ from app.main import app
 
 client = TestClient(app)
 
+# Toda a API (menos rotas públicas do QR) exige Bearer token. Autentica o
+# client de teste como o admin semeado para exercitar os endpoints protegidos.
+_login = client.post("/auth/login", json={"email": "joao@goldblack.com.br", "password": "senha123"})
+assert _login.status_code == 200, f"Login de teste falhou: {_login.text}"
+client.headers.update({"Authorization": f"Bearer {_login.json()['access_token']}"})
+
 state = {
     "farm_id": None,
     "plot_id": None,

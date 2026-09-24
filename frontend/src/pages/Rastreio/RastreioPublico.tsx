@@ -16,7 +16,6 @@ export function RastreioPublico() {
 
   const [selectedStage, setSelectedStage] = useState<TrackingStage | ''>('');
   const [notes, setNotes] = useState('');
-  const [recordedBy, setRecordedBy] = useState('');
 
   useEffect(() => {
     const loadTracking = async () => {
@@ -37,8 +36,9 @@ export function RastreioPublico() {
   const getAvailableNextStages = (current: TrackingStage) => {
     const currentIndex = STAGE_ORDER.indexOf(current);
     if (currentIndex === -1 || current === 'FINALIZADO') return [];
-    // Allow any stage after the current one
-    return STAGE_ORDER.slice(currentIndex + 1);
+    // Etapas seguintes, exceto FINALIZADO: a finalização só é permitida a um
+    // usuário autenticado (feita pelo painel admin), não pela página pública do QR.
+    return STAGE_ORDER.slice(currentIndex + 1).filter((s) => s !== 'FINALIZADO');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,7 +50,6 @@ export function RastreioPublico() {
       await trackingsApi.addEvent(data.id, {
         stage: selectedStage,
         notes: notes || undefined,
-        recorded_by: recordedBy || undefined,
       });
       setSuccess(true);
     } catch (err) {
@@ -180,19 +179,6 @@ export function RastreioPublico() {
                     </label>
                   ))}
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Seu Nome / Responsável (opcional)
-                </label>
-                <input
-                  type="text"
-                  value={recordedBy}
-                  onChange={(e) => setRecordedBy(e.target.value)}
-                  placeholder="Ex: João Silva"
-                  className="w-full bg-background border border-border rounded-lg px-4 py-3 text-text-primary focus:border-gold focus:ring-1 focus:ring-gold/50 text-sm"
-                />
               </div>
 
               <div>

@@ -1,0 +1,70 @@
+# docker-compose.prod.yml — produção na VM OCI
+#
+# Uso:
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Pré-requisitos na VM:
+#   - Arquivo .env.prod com as variáveis abaixo (nunca commitar esse arquivo)
+#   - Wallet Oracle extraída em ~/goldblack/wallet/
+#   - docker login vinhedo.ocir.io  (auth token do OCIR)
+#
+# Variáveis obrigatórias no .env.prod:
+#   OCIR_NAMESPACE      → namespace do OCIR (ver OCI console → Tenancy → Object Storage Namespace)
+#   JWT_SECRET_KEY      → segredo forte (≥16 chars, alta entropia)
+#   ORACLE_DB_PASSWORD  → senha do ADMIN do ADB
+#   ORACLE_WALLET_PASSWORD → senha da wallet
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: goldblack_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+
+  backend:
+    image: vcp.ocir.io/${OCIR_NAMESPACE}/goldblack-backend:latest
+    container_name: goldblack_backend
+    restart: unless-stopped
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+      - APP_ENV=production
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - DATABASE_URL=oracle+oracledb://
+      - ORACLE_DB_USER=ADMIN
+      - ORACLE_DB_PASSWORD=${ORACLE_DB_PASSWORD}
+      - ORACLE_DB_DSN=goldblackdb_tp
+      - ORACLE_WALLET_DIR=/app/wallet
+      - ORACLE_WALLET_PASSWORD=${ORACLE_WALLET_PASSWORD}
+    volumes:
+      # wallet montada como read-only; nunca entra na imagem
+      - ${WALLET_DIR:-~/goldblack/wallet}:/app/wallet:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    # sem expose de porta pro host — só o Caddy acessa via rede interna
+
+  frontend:
+    image: vcp.ocir.io/${OCIR_NAMESPACE}/goldblack-frontend:latest
+    container_name: goldblack_frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    # sem expose de porta pro host — só o Caddy acessa via rede interna
+
+volumes:
+  caddy_data:
+  caddy_config:

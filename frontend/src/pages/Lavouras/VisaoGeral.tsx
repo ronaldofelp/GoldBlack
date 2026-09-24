@@ -15,9 +15,10 @@ import { AlertCard, EmptyAlerts } from '../../components/ui/AlertCard';
 import { WeatherWidget } from '../../components/ui/WeatherWidget';
 import {
   plotsApi, harvestEstimatesApi, weatherApi, alertsApi, activitiesApi,
+  productionsApi, soilAnalysesApi,
 } from '../../services/api';
 import type {
-  Plot, HarvestEstimate, WeatherLog, SystemAlert, AgriculturalActivity,
+  Plot, HarvestEstimate, WeatherLog, SystemAlert, AgriculturalActivity, Production,
 } from '../../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -97,6 +98,8 @@ export function VisaoGeral() {
   const [weather, setWeather]         = useState<WeatherLog[]>(MOCK_WEATHER);
   const [alerts, setAlerts]           = useState<SystemAlert[]>(MOCK_ALERTS);
   const [activities, setActivities]   = useState<AgriculturalActivity[]>(MOCK_ACTIVITIES);
+  const [productions, setProductions] = useState<Production[]>([]);
+  const [soil, setSoil]               = useState<any[]>([]);
   const [loading, setLoading]         = useState(true);
 
   useEffect(() => {
@@ -123,12 +126,26 @@ export function VisaoGeral() {
     load();
   }, []);
 
+  // Produção realizada + solo vêm do domínio de custo (backend novo); fetch isolado
+  // para não regredir os dados acima quando esses endpoints não existirem (backend antigo).
+  useEffect(() => {
+    (async () => {
+      const [prR, soR] = await Promise.allSettled([productionsApi.list(), soilAnalysesApi.list()]);
+      if (prR.status === 'fulfilled' && prR.value.data.length) setProductions(prR.value.data);
+      if (soR.status === 'fulfilled' && soR.value.data.length) setSoil(soR.value.data);
+    })();
+  }, []);
+
   // ── Computed values ────────────────────────────────────────────────────────
 
   const totalArea       = plots.reduce((s, p) => s + Number(p.area_ha), 0);
   const activePlots     = plots.filter((p) => p.status === 'IN_PRODUCTION').length;
   const totalEstimated  = estimates.reduce((s, e) => s + Number(e.estimated_sacks ?? 0), 0);
   const avgYield        = totalArea > 0 ? totalEstimated / totalArea : 0;
+  const totalRealized   = productions.reduce((s, p) => s + Number(p.sacks_produced ?? 0), 0);
+  const realizedTrend   = totalEstimated > 0 && totalRealized > 0
+    ? +(((totalRealized - totalEstimated) / totalEstimated) * 100).toFixed(1)
+    : undefined;
   const avgAge          = (() => {
     const withYear = plots.filter((p) => p.planting_year);
     if (!withYear.length) return 0;
@@ -166,13 +183,15 @@ export function VisaoGeral() {
   // Latest weather
   const latestWeather = weather.sort((a, b) => b.log_date.localeCompare(a.log_date))[0];
 
-  // Agronomic indices (computed or hardcoded for MVP)
-  const agronomicIndices = [
-    { name: 'pH Médio do Solo',       value: '6.2',  unit: '',    status: 'good'    as const },
-    { name: 'Matéria Orgânica',       value: '3.8',  unit: '%',   status: 'good'    as const },
-    { name: 'Umidade Foliar',         value: '78',   unit: '%',   status: 'warning' as const },
-    { name: 'Índice Produtividade',   value: String(avgYield.toFixed(1)), unit: 'sc/ha', status: avgYield >= 25 ? 'good' : 'warning' as const },
-    { name: 'Cob. Calagem Prevista',  value: '85',   unit: '%',   status: 'good'    as const },
+  // Índices agronômicos — pH e matéria orgânica REAIS das análises de solo;
+  // índice de produtividade calculado. Só entra o que tem fonte de dado.
+  const avg = (vals: number[]) => (vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null);
+  const avgPh = avg(soil.map((a) => a.ph).filter((v): v is number => v != null).map(Number));
+  const avgOm = avg(soil.map((a) => a.organic_matter).filter((v): v is number => v != null).map(Number));
+  const agronomicIndices: { name: string; value: string; unit: string; status: 'good' | 'warning' | 'critical' }[] = [
+    ...(avgPh != null ? [{ name: 'pH Médio do Solo', value: avgPh.toFixed(1), unit: '', status: (avgPh >= 5.5 && avgPh <= 6.5 ? 'good' : 'warning') as 'good' | 'warning' }] : []),
+    ...(avgOm != null ? [{ name: 'Matéria Orgânica', value: avgOm.toFixed(1), unit: '%', status: (avgOm >= 3 ? 'good' : 'warning') as 'good' | 'warning' }] : []),
+    { name: 'Índice Produtividade', value: avgYield.toFixed(1), unit: 'sc/ha', status: (avgYield >= 25 ? 'good' : 'warning') as 'good' | 'warning' },
   ];
 
   const unreadAlerts = alerts.filter((a) => !a.is_read);
@@ -219,17 +238,16 @@ export function VisaoGeral() {
           title="Produção Estimada"
           value={totalEstimated.toLocaleString('pt-BR')}
           unit="sacas"
-          subtitle="Safra 2025/2026"
-          trend={4.2}
+          subtitle="Safra atual"
           icon={<TrendingUp size={18} />}
           variant="positive"
         />
         <KPICard
           title="Produção Realizada"
-          value="2.580"
-          unit="sacas"
-          subtitle="Safra 2024/2025"
-          trend={-1.5}
+          value={totalRealized > 0 ? totalRealized.toLocaleString('pt-BR') : '—'}
+          unit={totalRealized > 0 ? 'sacas' : ''}
+          subtitle={totalRealized > 0 ? 'Sacas colhidas (real)' : 'Sem apontamento de colheita'}
+          trend={realizedTrend}
           icon={<TrendingUp size={18} />}
           variant="default"
         />

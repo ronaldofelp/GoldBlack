@@ -78,7 +78,7 @@ def seed(db: Session):
         name="João da Silva Café",
         email="joao@goldblack.com.br",
         password_hash=pwd_context.hash("senha123"),
-        role=models.UserRole.PRODUCER,
+        role=models.UserRole.ADMIN,
     ))
 
     agronomist = user_repo.create(models.User(
@@ -86,7 +86,7 @@ def seed(db: Session):
         name="Dra. Ana Agrônoma",
         email="ana@goldblack.com.br",
         password_hash=pwd_context.hash("senha456"),
-        role=models.UserRole.AGRONOMIST,
+        role=models.UserRole.OPERATOR,
     ))
 
     operator = user_repo.create(models.User(
@@ -96,8 +96,8 @@ def seed(db: Session):
         password_hash=pwd_context.hash("senha789"),
         role=models.UserRole.OPERATOR,
     ))
-    print(f"   + {producer.name} (PRODUTOR)")
-    print(f"   + {agronomist.name} (AGRONOMO)")
+    print(f"   + {producer.name} (ADMIN)")
+    print(f"   + {agronomist.name} (OPERADOR)")
     print(f"   + {operator.name} (OPERADOR)")
 
     # ── Propriedade ───────────────────────────────────────────────────────────

@@ -4,6 +4,16 @@ from app.main import app
 
 client = TestClient(app)
 
+# CRUD de rastreio é protegido (só o consumo público via QR é aberto). Autentica
+# o client de teste como o admin semeado.
+_login = client.post("/auth/login", json={"email": "joao@goldblack.com.br", "password": "senha123"})
+assert _login.status_code == 200, f"Login de teste falhou: {_login.text}"
+client.headers.update({"Authorization": f"Bearer {_login.json()['access_token']}"})
+ADMIN_NAME = _login.json()["user"]["name"]
+
+# Client SEM autenticação: simula quem escaneia o QR (rota pública de eventos).
+anon = TestClient(app)
+
 state = {
     "farm_id": None,
     "plot_id": None,
@@ -110,19 +120,53 @@ def test_update_tracking():
     assert response.json()["description"] == "Atualizado"
 
 
+def _fresh_tracking_id(code_suffix: str) -> str:
+    """Cria um lote + rastreio isolados (via client autenticado) para testes que
+    não devem perturbar a sequência de estado compartilhada."""
+    batch = client.post("/batches", json={
+        "plot_id": state["plot_id"],
+        "batch_code": f"BATCH-ANON-{code_suffix}",
+        "harvest_season": "2026/2027",
+        "harvest_date": "2026-09-01",
+        "coffee_type": "NATURAL",
+        "total_volume_measures": 100,
+    }).json()
+    return client.post("/trackings", json={
+        "batch_id": batch["id"], "description": f"Rastreio anon {code_suffix}",
+    }).json()["id"]
+
+
+def test_anon_event_gets_neutral_author():
+    """Chamador não autenticado (QR): recorded_by é rotulado, nunca confiado do payload."""
+    tid = _fresh_tracking_id("author")
+    payload = {"stage": "LAVADOR", "notes": "Espalhado no terreiro", "recorded_by": "Administrador"}
+    response = anon.post(f"/trackings/{tid}/events", json=payload)
+    assert response.status_code == 201
+    assert response.json()["recorded_by"] == "Consumidor via QR"
+
+
+def test_anon_cannot_finalize():
+    """Só usuário autenticado finaliza um rastreio; anônimo recebe 403."""
+    tid = _fresh_tracking_id("finalize")
+    response = anon.post(f"/trackings/{tid}/events", json={"stage": "FINALIZADO"})
+    assert response.status_code == 403
+
+
 def test_add_tracking_event():
     payload = {
         "stage": "LAVADOR",
         "notes": "Café lavado com sucesso",
-        "recorded_by": "Ronaldo"
+        "recorded_by": "Ronaldo"  # deve ser IGNORADO (anti-falsificação de autoria)
     }
     response = client.post(f"/trackings/{state['tracking_id']}/events", json=payload)
     assert response.status_code == 201
     data = response.json()
     assert data["stage"] == "LAVADOR"
     assert data["notes"] == "Café lavado com sucesso"
-    assert data["recorded_by"] == "Ronaldo"
-    
+    # recorded_by vem do principal autenticado, não do payload:
+    assert data["recorded_by"] == ADMIN_NAME
+    assert data["recorded_by"] != "Ronaldo"
+
     # Verify tracking current_stage was updated
     tracking = client.get(f"/trackings/{state['tracking_id']}").json()
     assert tracking["current_stage"] == "LAVADOR"

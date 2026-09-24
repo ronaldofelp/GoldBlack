@@ -11,8 +11,8 @@ import { clsx } from 'clsx';
 
 import { KPICard } from '../../components/ui/KPICard';
 import { ChartCard, CustomTooltip } from '../../components/ui/ChartCard';
-import { transactionsApi, salesApi } from '../../services/api';
-import type { FinancialTransaction, Sale } from '../../types';
+import { transactionsApi, salesApi, plotsApi, seasonsApi, costApi } from '../../services/api';
+import type { FinancialTransaction, Sale, Plot, Season, PlotSeasonCost } from '../../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mock fallback
@@ -62,6 +62,35 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 const COST_COLORS = ['#C5A059', '#D4B47A', '#8B6914', '#F0D080', '#6B4F12'];
 
+// Categorias de despesa que compõem o Custo de Produção (o resto vira Despesa Operacional)
+const PRODUCTION_COST_CATS = new Set(['SUPPLY', 'LABOR']);
+
+const MONTH_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+type ProfitRow = { code: string; variety: string; revenue: number; cost: number; profit: number; margin: number; sacksProduced: number };
+
+// Agrega transações reais por mês (usa data de pagamento; cai na de vencimento)
+function buildMonthly(txs: FinancialTransaction[]) {
+  const byMonth = new Map<string, { cost: number; revenue: number }>();
+  txs.forEach((t) => {
+    const d = t.payment_date ?? t.due_date;
+    if (!d) return;
+    const key = d.slice(0, 7); // YYYY-MM
+    const cur = byMonth.get(key) ?? { cost: 0, revenue: 0 };
+    if (t.type === 'INCOME') cur.revenue += Number(t.amount);
+    else cur.cost += Number(t.amount);
+    byMonth.set(key, cur);
+  });
+  return Array.from(byMonth.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, v]) => ({
+      month: MONTH_ABBR[Number(key.slice(5, 7)) - 1] ?? key,
+      cost: v.cost,
+      revenue: v.revenue,
+      profit: v.revenue - v.cost,
+    }));
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Page
 // ─────────────────────────────────────────────────────────────────────────────
@@ -69,8 +98,13 @@ const COST_COLORS = ['#C5A059', '#D4B47A', '#8B6914', '#F0D080', '#6B4F12'];
 export function FinanceiroDashboard() {
   const [transactions, setTransactions] = useState<FinancialTransaction[]>(MOCK_TRANSACTIONS);
   const [sales, setSales]               = useState<Sale[]>(MOCK_SALES);
+  const [plots, setPlots]               = useState<Plot[]>([]);
+  const [seasons, setSeasons]           = useState<Season[]>([]);
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string>('');
+  const [plotCosts, setPlotCosts]       = useState<ProfitRow[] | null>(null); // null = usar mock
   const [loading, setLoading]           = useState(true);
 
+  // ── Financeiro (transações + vendas) ────────────────────────────────────────
   useEffect(() => {
     async function load() {
       try {
@@ -86,14 +120,73 @@ export function FinanceiroDashboard() {
     load();
   }, []);
 
+  // ── Dados de referência para a rentabilidade (talhões + safras) ──────────────
+  useEffect(() => {
+    async function loadRefs() {
+      try {
+        const [p, se] = await Promise.all([plotsApi.list(), seasonsApi.list()]);
+        if (p.data.length) setPlots(p.data);
+        if (se.data.length) {
+          setSeasons(se.data);
+          setSelectedSeasonId((cur) => cur || se.data[se.data.length - 1].id);
+        }
+      } catch {
+        // endpoints de custo indisponíveis (backend antigo) → mantém rentabilidade mock
+      }
+    }
+    loadRefs();
+  }, []);
+
+  // ── Rentabilidade REAL por talhão (motor de custo) na safra selecionada ──────
+  useEffect(() => {
+    if (!plots.length || !selectedSeasonId) return;
+    let cancelled = false;
+    (async () => {
+      const results = await Promise.all(
+        plots.map((pl) =>
+          costApi.plotSeasonCost(pl.id, selectedSeasonId)
+            .then((r) => ({ plot: pl, cost: r.data as PlotSeasonCost }))
+            .catch(() => null),
+        ),
+      );
+      if (cancelled) return;
+      const rows: ProfitRow[] = results
+        .filter((x): x is { plot: Plot; cost: PlotSeasonCost } => x !== null)
+        .map(({ plot, cost }) => {
+          const revenue = Number(cost.revenue) || 0;
+          const c       = Number(cost.total_cost) || 0;
+          const profit  = Number(cost.gross_profit ?? revenue - c);
+          return {
+            code: plot.code,
+            variety: plot.variety ?? '—',
+            revenue,
+            cost: c,
+            profit,
+            margin: revenue > 0 ? (profit / revenue) * 100 : 0,
+            sacksProduced: Number(cost.sacks_produced) || 0,
+          };
+        });
+      if (rows.length) setPlotCosts(rows);
+    })();
+    return () => { cancelled = true; };
+  }, [plots, selectedSeasonId]);
+
   // ── Computed KPIs ──────────────────────────────────────────────────────────
   const revenue    = transactions.filter((t) => t.type === 'INCOME').reduce((s, t) => s + Number(t.amount), 0);
   const totalCost  = transactions.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + Number(t.amount), 0);
   const profit     = revenue - totalCost;
   const margin     = revenue > 0 ? (profit / revenue) * 100 : 0;
-  const totalSacks = sales.reduce((s: number, sale: Sale) => s + (sale.total_value > 0 ? 1 : 0), 0) * 100 || 1880;
+  const totalSacks = plotCosts ? plotCosts.reduce((s, r) => s + r.sacksProduced, 0) : 1880;
   const costPerSack = totalSacks > 0 ? totalCost / totalSacks : 0;
   const breakEven  = revenue > 0 && profit > 0 ? totalCost : revenue;
+
+  // Rentabilidade e evolução mensal: reais quando disponíveis, senão mock
+  const profitability = plotCosts ?? PLOT_PROFITABILITY;
+  const monthlyData    = (() => {
+    const real = buildMonthly(transactions);
+    return real.length ? real : MONTHLY_DATA;
+  })();
+  const seasonName = seasons.find((s) => s.id === selectedSeasonId)?.name;
 
   // ── Cost breakdown ─────────────────────────────────────────────────────────
   const costByCategory = new Map<string, number>();
@@ -108,17 +201,18 @@ export function FinanceiroDashboard() {
     pct: totalCost > 0 ? ((value / totalCost) * 100).toFixed(1) : '0',
   }));
 
-  // ── DRE ───────────────────────────────────────────────────────────────────
+  // ── DRE (derivado de dados reais — sem imposto/depreciação fictícios) ───────
+  const productionCost = transactions
+    .filter((t) => t.type === 'EXPENSE' && PRODUCTION_COST_CATS.has(t.category))
+    .reduce((s, t) => s + Number(t.amount), 0);
+  const opex = totalCost - productionCost;
+  const grossProfit = revenue - productionCost;
   const dreLines = [
-    { description: 'Receita Bruta de Vendas',    value: revenue,         type: 'income'   as const },
-    { description: '  (-) Impostos e Deduções',  value: revenue * 0.05,  type: 'cost'     as const, indent: true },
-    { description: 'Receita Líquida',            value: revenue * 0.95,  type: 'subtotal' as const },
-    { description: '  (-) Custo de Produção',    value: totalCost * 0.65, type: 'cost'   as const, indent: true },
-    { description: 'Lucro Bruto',                value: (revenue * 0.95) - (totalCost * 0.65), type: 'subtotal' as const },
-    { description: '  (-) Despesas Operacionais',value: totalCost * 0.35, type: 'cost'   as const, indent: true },
-    { description: 'EBITDA',                     value: profit,           type: 'result'  as const },
-    { description: '  (-) Depreciação',          value: 2400,             type: 'cost'   as const, indent: true },
-    { description: 'Resultado Líquido',          value: profit - 2400,    type: 'result'  as const },
+    { description: 'Receita Bruta de Vendas',                      value: revenue,        type: 'income'   as const },
+    { description: '  (-) Custo de Produção (insumos + mão de obra)', value: productionCost, type: 'cost'   as const, indent: true },
+    { description: 'Lucro Bruto',                                  value: grossProfit,    type: 'subtotal' as const },
+    { description: '  (-) Despesas Operacionais',                  value: opex,           type: 'cost'     as const, indent: true },
+    { description: 'Resultado Operacional',                        value: profit,         type: 'result'   as const },
   ];
 
   if (loading) {
@@ -141,13 +235,19 @@ export function FinanceiroDashboard() {
             <span className="text-gold font-medium">Dashboard</span>
           </div>
           <h1 className="text-2xl font-bold text-text-primary">Dashboard Financeiro</h1>
-          <p className="text-text-muted text-sm mt-0.5">Safra 2025/2026 — Fazenda Ouro Preto</p>
+          <p className="text-text-muted text-sm mt-0.5">{seasonName ?? 'Safra atual'} — Fazenda Ouro Preto</p>
         </div>
         <div className="flex items-center gap-2">
-          <select className="input-base text-xs pr-8">
-            {['Safra 2025/2026', 'Safra 2024/2025', 'Safra 2023/2024'].map((s) => (
-              <option key={s}>{s}</option>
-            ))}
+          <select
+            className="input-base text-xs pr-8"
+            value={selectedSeasonId}
+            onChange={(e) => setSelectedSeasonId(e.target.value)}
+          >
+            {seasons.length
+              ? seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)
+              : ['Safra 2025/2026', 'Safra 2024/2025', 'Safra 2023/2024'].map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
           </select>
           <button className="btn-secondary">
             <RefreshCw size={15} />
@@ -211,7 +311,7 @@ export function FinanceiroDashboard() {
         {/* Composed chart: Cost vs Revenue */}
         <ChartCard title="Evolução Mensal" subtitle="Custo vs Receita (R$)" className="lg:col-span-3" minHeight={280}>
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={MONTHLY_DATA}>
+            <ComposedChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false}
@@ -245,7 +345,7 @@ export function FinanceiroDashboard() {
               </tr>
             </thead>
             <tbody>
-              {PLOT_PROFITABILITY.map((row) => (
+              {profitability.map((row) => (
                 <tr key={row.code} className="table-row">
                   <td className="table-cell font-bold text-gold">{row.code}</td>
                   <td className="table-cell">{row.variety}</td>

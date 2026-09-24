@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { Activity, MoreHorizontal, Calendar, Clock } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Activity, Calendar, Calculator } from 'lucide-react';
 import { EntityPageLayout } from '../../components/layout/EntityPageLayout';
-import { activitiesApi } from '../../services/api';
-import type { AgriculturalActivity } from '../../types';
+import { activitiesApi, plotsApi, seasonsApi } from '../../services/api';
+import type { AgriculturalActivity, Plot, Season } from '../../types';
 import { Modal } from '../../components/ui/Modal';
 import { EntityForm, type FieldDef } from '../../components/ui/EntityForm';
+import { ActivityCostModal } from '../Custo/ActivityCostModal';
 
 interface AtividadesProps {
   filterType?: string;
@@ -13,9 +14,14 @@ interface AtividadesProps {
 
 export function Atividades({ filterType, pageTitle = "Atividades e Tratos Culturais" }: AtividadesProps) {
   const [data, setData] = useState<AgriculturalActivity[]>([]);
+  const [plots, setPlots] = useState<Plot[]>([]);
+  const [seasons, setSeasons] = useState<Season[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [costActivityId, setCostActivityId] = useState<string | null>(null);
+
+  const plotCode = (id: string) => plots.find((p) => p.id === id)?.code ?? `ID: ${id.substring(0, 6)}`;
 
   const formFields: FieldDef[] = [
     {
@@ -23,6 +29,7 @@ export function Atividades({ filterType, pageTitle = "Atividades e Tratos Cultur
       label: 'Tipo de Atividade',
       type: 'select',
       required: true,
+      defaultValue: filterType,
       options: [
         { value: 'FERTILIZATION', label: 'Adubação' },
         { value: 'PRUNING', label: 'Poda' },
@@ -31,7 +38,10 @@ export function Atividades({ filterType, pageTitle = "Atividades e Tratos Cultur
         { value: 'PESTICIDE_APPLICATION', label: 'Aplicação de Defensivos' }
       ]
     },
-    { name: 'plot_id', label: 'ID do Talhão', type: 'text', required: true },
+    { name: 'plot_id', label: 'Talhão', type: 'select', required: true,
+      options: plots.map((p) => ({ value: p.id, label: p.code })) },
+    { name: 'season_id', label: 'Safra (p/ o custo)', type: 'select',
+      options: seasons.map((s) => ({ value: s.id, label: s.name })) },
     { name: 'start_date', label: 'Data de Início', type: 'date', required: true },
     { name: 'end_date', label: 'Data de Término', type: 'date' },
     {
@@ -45,14 +55,14 @@ export function Atividades({ filterType, pageTitle = "Atividades e Tratos Cultur
         { value: 'COMPLETED', label: 'Concluído' }
       ]
     },
-    { name: 'worked_hours', label: 'Horas Trabalhadas', type: 'number' },
-    { name: 'labor_cost', label: 'Custo de Mão de Obra', type: 'number' },
   ];
 
-  const handleCreate = async (data: any) => {
-    if (data.start_date) data.start_date = new Date(data.start_date).toISOString();
-    if (data.end_date) data.end_date = new Date(data.end_date).toISOString();
-    await activitiesApi.create(data);
+  const handleCreate = async (form: any) => {
+    const payload = { ...form };
+    if (payload.start_date) payload.start_date = new Date(payload.start_date).toISOString();
+    if (payload.end_date) payload.end_date = new Date(payload.end_date).toISOString();
+    if (!payload.season_id) payload.season_id = null;
+    await activitiesApi.create(payload);
     setIsModalOpen(false);
     loadData();
   };
@@ -61,12 +71,16 @@ export function Atividades({ filterType, pageTitle = "Atividades e Tratos Cultur
     try {
       setLoading(true);
       setError(null);
-      const res = await activitiesApi.list();
-      let activities = res.data;
+      const [actRes, plotsRes, seasonsRes] = await Promise.all([
+        activitiesApi.list(), plotsApi.list(), seasonsApi.list(),
+      ]);
+      let activities = actRes.data;
       if (filterType) {
         activities = activities.filter((a: AgriculturalActivity) => a.type === filterType);
       }
       setData(activities);
+      setPlots(plotsRes.data);
+      setSeasons(seasonsRes.data);
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar atividades');
     } finally {
@@ -102,17 +116,6 @@ export function Atividades({ filterType, pageTitle = "Atividades e Tratos Cultur
     return map[type] || type;
   };
 
-  const getDynamicFields = () => {
-    const fields = [...formFields];
-    if (filterType) {
-      const typeField = fields.find(f => f.name === 'type');
-      if (typeField) {
-        typeField.defaultValue = filterType;
-      }
-    }
-    return fields;
-  };
-
   return (
     <>
       <EntityPageLayout
@@ -128,7 +131,6 @@ export function Atividades({ filterType, pageTitle = "Atividades e Tratos Cultur
           { key: 'type', label: 'Tipo de Atividade' },
           { key: 'plot', label: 'Talhão' },
           { key: 'date', label: 'Período' },
-          { key: 'cost', label: 'Custo (M.O.)', align: 'right' },
           { key: 'status', label: 'Status' },
         ]}
         renderRow={(activity) => (
@@ -137,7 +139,7 @@ export function Atividades({ filterType, pageTitle = "Atividades e Tratos Cultur
               {getTypeLabel(activity.type)}
             </td>
             <td className="px-6 py-4 whitespace-nowrap text-text-muted">
-              <span className="font-mono text-xs border border-border px-1.5 py-0.5 rounded bg-background">ID: {activity.plot_id.substring(0, 6)}</span>
+              <span className="font-mono text-xs border border-border px-1.5 py-0.5 rounded bg-background">{plotCode(activity.plot_id)}</span>
             </td>
             <td className="px-6 py-4 whitespace-nowrap text-text-muted">
               <div className="flex items-center gap-1.5">
@@ -145,15 +147,16 @@ export function Atividades({ filterType, pageTitle = "Atividades e Tratos Cultur
                 <span>{new Date(activity.start_date).toLocaleDateString()}</span>
               </div>
             </td>
-            <td className="px-6 py-4 whitespace-nowrap text-right text-text-muted">
-              {activity.labor_cost != null ? `R$ ${Number(activity.labor_cost).toFixed(2)}` : '-'}
-            </td>
             <td className="px-6 py-4 whitespace-nowrap">
               {getStatusBadge(activity.status)}
             </td>
             <td className="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-card group-hover:bg-card-hover transition-colors">
-              <button className="p-1 rounded text-text-muted hover:text-gold transition-colors">
-                <MoreHorizontal size={18} />
+              <button
+                onClick={() => setCostActivityId(activity.id)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium text-text-muted hover:text-gold border border-border hover:border-gold transition-colors"
+                title="Apontar custos (insumos, mão de obra, máquina)"
+              >
+                <Calculator size={14} /> Custos
               </button>
             </td>
           </tr>
@@ -162,11 +165,15 @@ export function Atividades({ filterType, pageTitle = "Atividades e Tratos Cultur
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={`Nova ${filterType ? pageTitle : 'Atividade'}`}>
         <EntityForm
-          fields={getDynamicFields()}
+          fields={formFields}
           onSubmit={handleCreate}
           onCancel={() => setIsModalOpen(false)}
         />
       </Modal>
+
+      {costActivityId && (
+        <ActivityCostModal activityId={costActivityId} onClose={() => setCostActivityId(null)} />
+      )}
     </>
   );
 }

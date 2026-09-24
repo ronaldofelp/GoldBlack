@@ -1,11 +1,14 @@
 
+import os
+import re
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Annotated, Optional
 
-from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi import FastAPI, Depends, HTTPException, status, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from jose import jwt, JWTError
 
 from .database import engine
 from . import models, schemas
@@ -58,6 +61,117 @@ def _auto_seed():
 _auto_seed()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Autenticação (JWT stateless)
+# ─────────────────────────────────────────────────────────────────────────────
+_DEV_JWT_SECRET = "dev-secret-troque-em-producao-goldblack"
+_DEV_ENVS = {"development", "dev", "test", "testing", "local"}
+APP_ENV = os.getenv("APP_ENV", "development").lower()
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+# Deny-by-default: só cai no segredo de dev em ambientes reconhecidamente dev/test.
+# Qualquer outro valor de APP_ENV (staging, prod, typo...) exige segredo próprio.
+if not JWT_SECRET_KEY:
+    if APP_ENV not in _DEV_ENVS:
+        raise RuntimeError(
+            "JWT_SECRET_KEY é obrigatório fora de ambientes dev/test "
+            f"(APP_ENV={APP_ENV!r}). Gere um segredo forte e configure a variável de ambiente."
+        )
+    JWT_SECRET_KEY = _DEV_JWT_SECRET  # somente dev/teste
+# Nunca aceitar o default do repo como se fosse segredo real, mesmo se colado na env var.
+elif JWT_SECRET_KEY == _DEV_JWT_SECRET and APP_ENV not in _DEV_ENVS:
+    raise RuntimeError("JWT_SECRET_KEY não pode ser o valor default do repositório em produção.")
+elif JWT_SECRET_KEY != _DEV_JWT_SECRET and len(JWT_SECRET_KEY) < 16:
+    raise RuntimeError("JWT_SECRET_KEY muito curto: use pelo menos 16 caracteres de alta entropia.")
+JWT_ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", str(60 * 12)))  # 12h
+
+_credentials_exception = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Não autenticado ou token inválido.",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
+
+def create_access_token(data: dict) -> str:
+    payload = data.copy()
+    payload["exp"] = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+
+# Rotas públicas: docs, login e o rastreio via QR (o diferencial do produto,
+# precisa ser acessível sem login por quem escaneia o código).
+_PUBLIC_EXACT = {
+    "/", "/health", "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect", "/auth/login",
+}
+_PUBLIC_EVENTS_RE = re.compile(r"^/trackings/[^/]+/events/?$")
+
+
+def _is_public(request: Request) -> bool:
+    if request.method == "OPTIONS":  # preflight CORS
+        return True
+    path = request.url.path
+    if path in _PUBLIC_EXACT:
+        return True
+    if path.startswith("/trackings/code/"):          # consulta do lote pelo código do QR
+        return True
+    if path.startswith("/trackings/") and path.endswith("/qrcode"):  # imagem do QR (<img src>)
+        return True
+    if _PUBLIC_EVENTS_RE.match(path):                # avanço de etapa pela página pública do QR
+        return True
+    return False
+
+
+def auth_guard(request: Request):
+    """Dependência global: exige Bearer token válido em tudo, exceto rotas públicas.
+    Guarda o payload em request.state para as dependências get_current_user/require_admin."""
+    if _is_public(request):
+        return
+    auth = request.headers.get("Authorization", "")
+    if not auth.lower().startswith("bearer "):
+        raise _credentials_exception
+    token = auth.split(" ", 1)[1]
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+    except JWTError:
+        raise _credentials_exception
+    request.state.user_id = payload.get("sub")
+    request.state.user_role = payload.get("role")
+
+
+def get_current_user(
+    request: Request,
+    repo: Annotated[IUserRepository, Depends(get_user_repo)],
+) -> models.User:
+    user_id = getattr(request.state, "user_id", None)
+    if not user_id:
+        raise _credentials_exception
+    user = repo.get_by_id(user_id)
+    if not user:
+        raise _credentials_exception
+    return user
+
+
+def require_admin(user: Annotated[models.User, Depends(get_current_user)]) -> models.User:
+    if user.role != models.UserRole.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Requer papel de Administrador.")
+    return user
+
+
+def _optional_user(request: Request, user_repo: IUserRepository) -> models.User | None:
+    """Resolve o usuário autenticado em rotas PÚBLICAS (onde o auth_guard não
+    faz o parse do token). Retorna None se não houver Bearer válido — usado para
+    diferenciar o operador logado de quem apenas escaneou o QR."""
+    auth = request.headers.get("Authorization", "")
+    if not auth.lower().startswith("bearer "):
+        return None
+    try:
+        payload = jwt.decode(auth.split(" ", 1)[1], JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+    except JWTError:
+        return None
+    user_id = payload.get("sub")
+    return user_repo.get_by_id(user_id) if user_id else None
+
+
 app = FastAPI(
     title="GoldBlack Coffee Platform API",
     description=(
@@ -67,6 +181,7 @@ app = FastAPI(
     version="1.0.0",
     contact={"name": "GoldBlack Coffee Team"},
     license_info={"name": "Proprietário"},
+    dependencies=[Depends(auth_guard)],
 )
 
 app.add_middleware(
@@ -82,15 +197,44 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from .cost_router import router as cost_router
+app.include_router(cost_router)
+
 
 def _404(entity: str, entity_id: str):
     raise HTTPException(status_code=404, detail=f"{entity} '{entity_id}' não encontrado.")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Autenticação
+# ─────────────────────────────────────────────────────────────────────────────
+@app.post("/auth/login", response_model=schemas.Token, tags=["Autenticação"])
+def login(
+    payload: schemas.LoginRequest,
+    repo: Annotated[IUserRepository, Depends(get_user_repo)],
+):
+    """Autentica por e-mail + senha e devolve um token JWT."""
+    user = repo.get_by_email(payload.email)
+    if not user or not pwd_context.verify(payload.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="E-mail ou senha inválidos.",
+        )
+    token = create_access_token({"sub": user.id, "role": user.role.value})
+    return {"access_token": token, "token_type": "bearer", "user": user}
+
+
+@app.get("/auth/me", response_model=schemas.UserResponse, tags=["Autenticação"])
+def read_me(user: Annotated[models.User, Depends(get_current_user)]):
+    """Retorna o usuário autenticado (valida o token e devolve os dados atuais)."""
+    return user
 
 
 @app.post("/users", response_model=schemas.UserResponse, status_code=201, tags=["Usuários"])
 def create_user(
     payload: schemas.UserCreate,
     repo: Annotated[IUserRepository, Depends(get_user_repo)],
+    _admin: Annotated[models.User, Depends(require_admin)],
 ):
     """Cria um novo usuário no sistema."""
     if repo.get_by_email(payload.email):
@@ -129,6 +273,7 @@ def update_user(
     user_id: str,
     payload: schemas.UserUpdate,
     repo: Annotated[IUserRepository, Depends(get_user_repo)],
+    _admin: Annotated[models.User, Depends(require_admin)],
 ):
     """Atualiza parcialmente os dados de um usuário."""
     user = repo.get_by_id(user_id)
@@ -140,7 +285,11 @@ def update_user(
 
 
 @app.delete("/users/{user_id}", status_code=204, tags=["Usuários"])
-def delete_user(user_id: str, repo: Annotated[IUserRepository, Depends(get_user_repo)]):
+def delete_user(
+    user_id: str,
+    repo: Annotated[IUserRepository, Depends(get_user_repo)],
+    _admin: Annotated[models.User, Depends(require_admin)],
+):
     """Remove um usuário."""
     if not repo.delete(user_id):
         _404("Usuário", user_id)
@@ -1029,22 +1178,38 @@ def delete_tracking(
 def create_tracking_event(
     tracking_id: str,
     payload: schemas.TrackingEventCreate,
+    request: Request,
     tracking_repo: Annotated[ICoffeeTrackingRepository, Depends(get_coffee_tracking_repo)],
     event_repo: Annotated[ITrackingEventRepository, Depends(get_tracking_event_repo)],
+    user_repo: Annotated[IUserRepository, Depends(get_user_repo)],
 ):
-    """Registra uma nova etapa no rastreio. Atualiza o current_stage automaticamente."""
+    """Registra uma nova etapa no rastreio. Atualiza o current_stage automaticamente.
+
+    Rota pública (usada pela página do QR), mas endurecida: o autor do registro
+    (recorded_by) é derivado do chamador — nunca confiado do payload — e a
+    finalização só é permitida a um usuário autenticado."""
     tracking = tracking_repo.get_by_id(tracking_id)
     if not tracking:
         _404("Rastreio", tracking_id)
     if tracking.status == models.TrackingStatus.COMPLETED:
         raise HTTPException(status_code=400, detail="Rastreio já finalizado. Não é possível adicionar novas etapas.")
 
+    # Diferencia o operador logado de quem só escaneou o QR.
+    principal = _optional_user(request, user_repo)
+    if payload.stage == models.TrackingStage.FINALIZADO and principal is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Apenas usuários autenticados podem finalizar um rastreio.",
+        )
+    # Ignora recorded_by do payload (impede falsificação de autoria).
+    recorded_by = principal.name if principal else "Consumidor via QR"
+
     event = models.TrackingEvent(
         id=str(uuid.uuid4()),
         tracking_id=tracking_id,
         stage=payload.stage,
         notes=payload.notes,
-        recorded_by=payload.recorded_by,
+        recorded_by=recorded_by,
     )
     created_event = event_repo.create(event)
 
