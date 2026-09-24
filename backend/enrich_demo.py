@@ -75,24 +75,52 @@ def main():
 
     print(f"[*] Enriquecendo API em {BASE}\n")
 
-    # ── IDs existentes ──────────────────────────────────────────────────────
-    farms = get("/farms")
-    users = get("/users")
-    plots = get("/plots")
-    if not farms or not users:
-        print("!! API sem farm/user base. Abortando.")
+    # ── IDs existentes ou criados (banco pode estar vazio em produção) ─────────
+    farms = get("/farms") or []
+    users = get("/users") or []
+    plots = get("/plots") or []
+
+    if not users:
+        print("!! Nenhum usuário encontrado. Execute create_admin.py primeiro.")
         sys.exit(1)
 
-    farm1 = farms[0]
-    producer_id = farm1["producer_id"]
-    agronomist = next((u for u in users if u["role"] == "OPERATOR"), users[0])
-    agro_id = agronomist["id"]
+    # Fazenda principal — cria se o banco estiver vazio
+    farm1 = farms[0] if farms else None
+    if not farm1:
+        print("[*] Banco vazio — criando fazenda base...")
+        farm1 = post("/farms", {
+            "producer_id": users[0]["id"],
+            "name": "Fazenda Ouro Preto",
+            "total_area_ha": 145.0,
+        }, "farms")
+        if not farm1:
+            print("!! Falha ao criar fazenda base. Abortando.")
+            sys.exit(1)
 
-    # talhões "de verdade" (ignora lixo de teste com variety numérica/áreas absurdas)
+    producer_id = farm1["producer_id"]
+
+    # Talhões base T-01..T-04 — cria os que ainda não existem
     real_plots = [p for p in plots
                   if p.get("variety") and not str(p["variety"]).isdigit()
                   and float(p["area_ha"]) < 1000]
     plot_by_code = {p["code"]: p for p in real_plots}
+    for code, area, variety, yr in [
+        ("T-01", 45.0, "Catuaí Vermelho", 2015),
+        ("T-02", 32.0, "Bourbon Amarelo",  2018),
+        ("T-03", 28.0, "Mundo Novo",       2012),
+        ("T-04", 22.0, "Catuaí Amarelo",   2020),
+    ]:
+        if code not in plot_by_code:
+            p = post("/plots", {
+                "farm_id": farm1["id"], "code": code, "area_ha": area,
+                "variety": variety, "planting_year": yr, "status": "IN_PRODUCTION",
+            }, "plots")
+            if p:
+                plot_by_code[code] = p
+                real_plots.append(p)
+
+    agronomist = next((u for u in users if u["role"] == "OPERATOR"), users[0])
+    agro_id = agronomist["id"]
 
     # ── 2ª propriedade + talhões (dá vida à tela Propriedades) ──────────────
     print("[*] 2a propriedade + talhoes...")
