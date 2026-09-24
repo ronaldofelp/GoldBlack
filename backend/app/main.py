@@ -37,11 +37,14 @@ from passlib.context import CryptContext
 
 from .database import SessionLocal, engine
 
-models.Base.metadata.create_all(bind=engine)
-
 _DEV_JWT_SECRET = "dev-secret-troque-em-producao-goldblack"
 _DEV_ENVS = {"development", "dev", "test", "testing", "local"}
 APP_ENV = os.getenv("APP_ENV", "production").lower()  # sem APP_ENV explícito = produção
+
+# Em dev/test o create_all cria o schema na hora (SQLite em memória, sem Alembic).
+# Em produção a única fonte de verdade do schema é o Alembic (alembic upgrade head).
+if APP_ENV in _DEV_ENVS:
+    models.Base.metadata.create_all(bind=engine)
 
 
 def _auto_seed():
