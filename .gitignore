@@ -108,3 +108,5 @@ ocid1.ormjob*
 .claude/settings.local.json
 *-mcp/
 gb-login.png
+.claude/
+.agents/
