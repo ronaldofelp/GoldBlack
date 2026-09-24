@@ -10,7 +10,7 @@ import {
 import { clsx } from 'clsx';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Nav tree definition
+// Definição da árvore de navegação
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface NavItem {
@@ -75,7 +75,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Component
+// Componente
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface SidebarProps {
@@ -105,7 +105,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         collapsed ? 'w-16' : 'w-60',
       )}
     >
-      {/* Logo */}
+      {/* Logomarca */}
       <div className="flex items-center gap-3 px-4 h-16 border-b border-border flex-shrink-0">
         <div className="flex items-center justify-center w-8 h-8 bg-gold rounded-lg flex-shrink-0">
           <span className="text-background font-black text-sm">GB</span>
@@ -113,12 +113,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {!collapsed && (
           <div className="overflow-hidden">
             <p className="text-gold font-bold text-sm leading-none">GoldBlack</p>
-            <p className="text-text-muted text-xs leading-none mt-0.5">Coffee Platform</p>
+            <p className="text-text-muted text-xs leading-none mt-0.5">Gestão Cafeeira</p>
           </div>
         )}
       </div>
 
-      {/* Nav */}
+      {/* Navegação */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
         {NAV_ITEMS.map((item) => {
           const hasChildren = !!item.children?.length;
@@ -196,7 +196,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         })}
       </nav>
 
-      {/* Collapse toggle */}
+      {/* Botão de recolher */}
       <button
         onClick={onToggle}
         className={clsx(
@@ -205,12 +205,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           'bg-card border border-border text-text-muted',
           'hover:border-gold hover:text-gold transition-colors duration-150',
         )}
-        title={collapsed ? 'Expandir sidebar' : 'Recolher sidebar'}
+        title={collapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'}
       >
         {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
       </button>
 
-      {/* Version */}
+      {/* Versão */}
       {!collapsed && (
         <div className="px-4 py-3 border-t border-border">
           <p className="text-text-muted text-xs">v1.0.0 — MVP</p>

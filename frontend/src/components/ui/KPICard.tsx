@@ -7,9 +7,9 @@ interface KPICardProps {
   value: string | number;
   unit?: string;
   subtitle?: string;
-  trend?: number;       // % change
+  trend?: number;       // variação %
   icon?: ReactNode;
-  accent?: boolean;     // golden border
+  accent?: boolean;     // borda dourada
   variant?: 'default' | 'positive' | 'negative' | 'gold';
 }
 
@@ -26,7 +26,7 @@ export function KPICard({
         accent && 'border-gold/40 shadow-gold',
       )}
     >
-      {/* Top row */}
+      {/* Linha superior */}
       <div className="flex items-start justify-between gap-2">
         <p className="label">{title}</p>
         {icon && (
@@ -44,7 +44,7 @@ export function KPICard({
         )}
       </div>
 
-      {/* Value */}
+      {/* Valor */}
       <div className="flex items-baseline gap-1.5 flex-wrap">
         <span
           className={clsx(
@@ -60,7 +60,7 @@ export function KPICard({
         {unit && <span className="text-sm text-text-muted font-medium">{unit}</span>}
       </div>
 
-      {/* Footer */}
+      {/* Rodapé */}
       <div className="flex items-center justify-between gap-2 mt-auto pt-1 border-t border-border">
         {subtitle && <p className="text-xs text-text-muted truncate">{subtitle}</p>}
         {trend !== undefined && (
@@ -80,7 +80,7 @@ export function KPICard({
         )}
       </div>
 
-      {/* Decorative gradient */}
+      {/* Gradiente decorativo */}
       {accent && (
         <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-gold/5 blur-xl pointer-events-none" />
       )}

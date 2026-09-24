@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+r"""
 oracle_cleanup.py — Dropa APENAS as tabelas do GoldBlack no schema ADMIN do ADB.
 Útil quando o alembic upgrade falha no meio (DDL não-transacional no Oracle)
 e precisa recomeçar do zero.
@@ -99,9 +99,9 @@ def main():
                 try:
                     cur.execute(f"DROP TABLE {tbl} CASCADE CONSTRAINTS PURGE")
                     dropped.append(tbl)
-                    print(f"  ✓ DROP TABLE {tbl}")
+                    print(f"  [OK]   DROP TABLE {tbl}")
                 except Exception as e:
-                    print(f"  ✗ {tbl}: {e}")
+                    print(f"  [FALHA] {tbl}: {e}")
             else:
                 skipped.append(tbl)
 
@@ -110,7 +110,7 @@ def main():
     print(f"\nDropadas: {len(dropped)} tabelas")
     if skipped:
         print(f"Não existiam (ok): {', '.join(skipped)}")
-    print("\n✅ Schema limpo. Pode rodar: python -m alembic upgrade head")
+    print("\nSchema limpo. Pode rodar: python -m alembic upgrade head")
 
 
 if __name__ == "__main__":

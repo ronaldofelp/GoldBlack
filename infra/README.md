@@ -41,7 +41,7 @@ terraform apply
 
 ---
 
-## ⚠️ "Out of host capacity" no ARM A1
+## "Out of host capacity" no ARM A1
 
 É a Oracle sem estoque de A1 gratuito na Availability Domain/região naquele momento — **não é erro de configuração**. O que fazer:
 - Mude `ad_number` (1 → 2 → 3) e rode o Plan/Apply de novo.

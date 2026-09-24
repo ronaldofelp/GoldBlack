@@ -50,7 +50,7 @@ export function EntityPageLayout<T>({
 
   return (
     <div className="p-6 max-w-[1600px] mx-auto w-full flex flex-col h-[calc(100vh-64px)]">
-      {/* Header */}
+      {/* Cabeçalho */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 shrink-0">
         <div className="flex items-center gap-3">
           {icon && (
@@ -87,7 +87,7 @@ export function EntityPageLayout<T>({
         </div>
       </div>
 
-      {/* Toolbar / Filters (Placeholder for future) */}
+      {/* Barra de ferramentas / Filtros (reservado para uso futuro) */}
       <div className="flex items-center gap-4 mb-4 shrink-0">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
@@ -101,7 +101,7 @@ export function EntityPageLayout<T>({
         </div>
       </div>
 
-      {/* Content Area */}
+      {/* Área de conteúdo */}
       <div className="bg-card border border-border rounded-xl flex-1 flex flex-col min-h-0 overflow-hidden shadow-card">
         {error && (
           <div className="m-4 p-4 rounded bg-negative/10 border border-negative/20 flex items-start gap-3">
@@ -129,7 +129,7 @@ export function EntityPageLayout<T>({
                     {col.label}
                   </th>
                 ))}
-                {/* Actions column */}
+                {/* Coluna de ações */}
                 <th className="px-6 py-4 font-semibold tracking-wider text-right sticky right-0 bg-card/80 backdrop-blur-sm">Ações</th>
               </tr>
             </thead>

@@ -28,7 +28,7 @@ export function ChartCard({ title, subtitle, action, children, className, minHei
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Recharts custom tooltip
+// Tooltip customizado do Recharts
 // ─────────────────────────────────────────────────────────────────────────────
 interface TooltipProps {
   active?: boolean;

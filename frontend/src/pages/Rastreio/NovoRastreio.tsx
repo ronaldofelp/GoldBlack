@@ -56,7 +56,7 @@ export function NovoRastreio() {
     if (!qrCodeUrl || !createdTracking) return;
     
     try {
-      // Fetch the image as blob to convert to base64 for jsPDF
+      // Busca a imagem como blob para converter em base64 para o jsPDF
       const response = await fetch(qrCodeUrl);
       const blob = await response.blob();
       
@@ -72,7 +72,7 @@ export function NovoRastreio() {
         });
         
         doc.setFontSize(22);
-        doc.text('GoldBlack Coffee Tracking', 105, 30, { align: 'center' });
+        doc.text('GoldBlack — Rastreio de Café', 105, 30, { align: 'center' });
         
         doc.setFontSize(16);
         doc.text(`Rastreio: ${createdTracking.tracking_code}`, 105, 45, { align: 'center' });
@@ -80,7 +80,7 @@ export function NovoRastreio() {
         doc.setFontSize(12);
         doc.text(createdTracking.description, 105, 55, { align: 'center' });
         
-        // Add QR Code
+        // Adiciona o QR Code
         doc.addImage(base64data, 'PNG', 55, 70, 100, 100);
         
         doc.setFontSize(10);

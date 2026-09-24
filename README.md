@@ -177,7 +177,7 @@ Em `dependencies.py`, substitua `SQLAlchemyXRepository` por `OracleXRepository` 
 
 ---
 
-## 🗄️ Banco de dados
+## Banco de dados
 
 O arquivo `goldblack_coffee.db` (SQLite) é criado automaticamente ao iniciar a aplicação. Os dados de exemplo são populados automaticamente se o banco estiver vazio.
 

@@ -5,7 +5,7 @@ import { soilAnalysesApi } from '../../services/api';
 import { Modal } from '../../components/ui/Modal';
 import { EntityForm, type FieldDef } from '../../components/ui/EntityForm';
 
-// Mock types local until API is fully wired for this specific endpoint
+// Tipos mock locais até a API estar totalmente ligada para este endpoint específico
 interface SoilAnalysis {
   id: string;
   plot_id: string;

@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// TypeScript types mirroring the FastAPI Pydantic schemas
+// Tipos TypeScript que espelham os schemas Pydantic do FastAPI
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Enums ─────────────────────────────────────────────────────────────────────
@@ -16,7 +16,7 @@ export type TransactionType     = 'INCOME' | 'EXPENSE';
 export type TransactionCategory = 'SUPPLY' | 'LABOR' | 'COFFEE_SALE' | 'MAINTENANCE';
 export type TransactionStatus   = 'PAID' | 'PENDING';
 
-// ── Domain entities ───────────────────────────────────────────────────────────
+// ── Entidades de domínio ───────────────────────────────────────────────────────
 export interface User {
   id: string;
   name: string;
@@ -125,7 +125,7 @@ export interface FinancialTransaction {
   status: TransactionStatus;
 }
 
-// ── Dashboard computed types (frontend-only) ──────────────────────────────────
+// ── Tipos calculados do dashboard (apenas no frontend) ──────────────────────────
 
 export interface PlotKPI {
   totalArea: number;
@@ -201,7 +201,7 @@ export interface DRELine {
   indent?: boolean;
 }
 
-// ── Coffee Tracking ───────────────────────────────────────────────────────────
+// ── Rastreio de café ───────────────────────────────────────────────────────────
 
 export type TrackingStage =
   | 'COLHEITA'

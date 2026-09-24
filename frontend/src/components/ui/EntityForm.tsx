@@ -13,7 +13,7 @@ export interface FieldDef {
   name: string;
   label: string;
   type: FieldType;
-  options?: FieldOption[]; // For 'select' type
+  options?: FieldOption[]; // Para o tipo 'select'
   required?: boolean;
   defaultValue?: any;
 }
@@ -26,7 +26,7 @@ interface EntityFormProps {
 }
 
 export function EntityForm({ fields, onSubmit, onCancel, submitLabel = 'Salvar' }: EntityFormProps) {
-  // Initialize state based on default values or empty strings
+  // Inicializa o estado com base nos valores padrão ou strings vazias
   const initialState: Record<string, any> = {};
   fields.forEach(f => {
     initialState[f.name] = f.defaultValue !== undefined ? f.defaultValue : (f.type === 'boolean' ? false : '');
@@ -46,7 +46,7 @@ export function EntityForm({ fields, onSubmit, onCancel, submitLabel = 'Salvar' 
     setIsSubmitting(true);
     
     try {
-      // Cast values to their appropriate types before submission
+      // Converte os valores para os tipos apropriados antes do envio
       const parsedData = { ...formData };
       fields.forEach(f => {
         if (f.type === 'number') {

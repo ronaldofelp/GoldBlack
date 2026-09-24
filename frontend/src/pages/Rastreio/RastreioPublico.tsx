@@ -104,7 +104,7 @@ export function RastreioPublico() {
 
   return (
     <div className="min-h-screen bg-background text-text-primary">
-      {/* Public Header */}
+      {/* Cabeçalho público */}
       <header className="bg-card border-b border-border px-6 py-4 sticky top-0 z-10 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gold rounded flex items-center justify-center text-background font-black text-sm shadow-md">GB</div>
@@ -117,7 +117,7 @@ export function RastreioPublico() {
       </header>
 
       <main className="p-4 sm:p-6 max-w-xl mx-auto space-y-6">
-        {/* Tracker Info */}
+        {/* Informações do rastreio */}
         <div className="bg-card border border-border rounded-xl p-5 shadow-card text-center">
           <p className="text-sm text-text-muted mb-1">Rastreando lote</p>
           <h1 className="text-lg font-bold text-text-primary leading-tight mb-4">{data.description}</h1>

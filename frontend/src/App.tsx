@@ -48,11 +48,11 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public Routes */}
+          {/* Rotas públicas */}
           <Route path="/login" element={<Login />} />
           <Route path="/rastreio/atualizar/:code" element={<RastreioPublico />} />
           
-          {/* Protected Routes */}
+          {/* Rotas protegidas */}
           <Route element={
             <ProtectedRoute>
               <Layout />
@@ -78,12 +78,12 @@ export default function App() {
           <Route path="/estoque"        element={<Estoque />} />
           <Route path="/compras"        element={<Compras />} />
           
-          {/* Tracking / Rastreio */}
+          {/* Rastreio */}
           <Route path="/rastreio"       element={<Rastreio />} />
           <Route path="/rastreio/novo"  element={<NovoRastreio />} />
           <Route path="/rastreio/:id"   element={<DetalheRastreio />} />
 
-          {/* Financial & Sales */}
+          {/* Financeiro e Vendas */}
           <Route path="/vendas"         element={<Vendas />} />
           
           <Route path="/financeiro"       element={<FinanceiroDashboard />} />

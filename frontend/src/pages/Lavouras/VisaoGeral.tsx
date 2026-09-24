@@ -22,7 +22,7 @@ import type {
 } from '../../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Mock fallback data (renders when API is offline)
+// Dados mock de fallback (exibidos quando a API está offline)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MOCK_PLOTS: Plot[] = [
@@ -55,7 +55,7 @@ const MOCK_ACTIVITIES: AgriculturalActivity[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helpers
+// Auxiliares
 // ─────────────────────────────────────────────────────────────────────────────
 
 const VARIETY_COLORS = ['#C5A059', '#D4B47A', '#8B6914', '#F0D080', '#6B4F12', '#E8C866'];
@@ -89,7 +89,7 @@ function calcAge(year: number | null): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Page
+// Página
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function VisaoGeral() {
@@ -138,7 +138,7 @@ export function VisaoGeral() {
     })();
   }, []);
 
-  // ── Computed values ────────────────────────────────────────────────────────
+  // ── Valores calculados ────────────────────────────────────────────────────────
 
   const totalArea       = plots.reduce((s, p) => s + Number(p.area_ha), 0);
   const activePlots     = plots.filter((p) => p.status === 'IN_PRODUCTION').length;
@@ -155,7 +155,7 @@ export function VisaoGeral() {
     return withYear.reduce((s, p) => s + (curr - p.planting_year!), 0) / withYear.length;
   })();
 
-  // Variety distribution for pie
+  // Distribuição de variedades (gráfico de pizza)
   const varietyMap = new Map<string, number>();
   plots.forEach((p) => {
     const key = p.variety ?? 'Outros';
@@ -165,7 +165,7 @@ export function VisaoGeral() {
     name, value: +Number(value).toFixed(1), color: VARIETY_COLORS[i % VARIETY_COLORS.length],
   }));
 
-  // Age distribution for bar
+  // Distribuição por idade (gráfico de barras)
   const ageRanges = [
     { range: '< 5 anos',  min: 0,  max: 4  },
     { range: '5–10 anos', min: 5,  max: 10 },
@@ -182,7 +182,7 @@ export function VisaoGeral() {
     }).length,
   }));
 
-  // Latest weather
+  // Clima mais recente
   const latestWeather = [...weather].sort((a, b) => b.log_date.localeCompare(a.log_date))[0];
 
   // Índices agronômicos — pH e matéria orgânica REAIS das análises de solo;
@@ -208,7 +208,7 @@ export function VisaoGeral() {
 
   return (
     <div className="space-y-6">
-      {/* ── Page header ─────────────────────────────────────────────────── */}
+      {/* ── Cabeçalho da página ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 text-text-muted text-sm mb-1">
@@ -230,7 +230,7 @@ export function VisaoGeral() {
         </button>
       </div>
 
-      {/* ── KPI Row ──────────────────────────────────────────────────────── */}
+      {/* ── Linha de KPIs ──────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
         <KPICard
           title="Área Total Plantada"
@@ -276,9 +276,9 @@ export function VisaoGeral() {
         />
       </div>
 
-      {/* ── Charts Row ───────────────────────────────────────────────────── */}
+      {/* ── Linha de gráficos ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Variety Pie */}
+        {/* Gráfico de pizza de variedades */}
         <ChartCard
           title="Distribuição por Variedade"
           subtitle="Área total por cultivar (ha)"
@@ -316,7 +316,7 @@ export function VisaoGeral() {
           </ResponsiveContainer>
         </ChartCard>
 
-        {/* Age Bar */}
+        {/* Gráfico de barras por idade */}
         <ChartCard
           title="Faixa Etária da Lavoura"
           subtitle="Quantidade de talhões por idade"
@@ -334,9 +334,9 @@ export function VisaoGeral() {
         </ChartCard>
       </div>
 
-      {/* ── Tables + Side panels ─────────────────────────────────────────── */}
+      {/* ── Tabelas + painéis laterais ─────────────────────────────────────────── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Activities table */}
+        {/* Tabela de atividades */}
         <div className="xl:col-span-2 card overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-border">
             <h3 className="section-title">Atividades Recentes</h3>
@@ -379,9 +379,9 @@ export function VisaoGeral() {
           </div>
         </div>
 
-        {/* Right column: alerts + weather */}
+        {/* Coluna à direita: alertas + clima */}
         <div className="flex flex-col gap-4">
-          {/* Alerts */}
+          {/* Alertas */}
           <div className="card overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <div className="flex items-center gap-2">
@@ -402,7 +402,7 @@ export function VisaoGeral() {
             </div>
           </div>
 
-          {/* Weather */}
+          {/* Clima */}
           <WeatherWidget
             temperature={latestWeather?.temperature_celsius ?? 22}
             humidity={latestWeather?.relative_humidity ?? 70}
@@ -411,7 +411,7 @@ export function VisaoGeral() {
         </div>
       </div>
 
-      {/* ── Plots Table ──────────────────────────────────────────────────── */}
+      {/* ── Tabela de talhões ──────────────────────────────────────────────────── */}
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h3 className="section-title">Talhões</h3>
@@ -454,7 +454,7 @@ export function VisaoGeral() {
         </div>
       </div>
 
-      {/* ── Agronomic Indices ────────────────────────────────────────────── */}
+      {/* ── Índices agronômicos ────────────────────────────────────────────────── */}
       <div className="card p-5">
         <h3 className="section-title mb-4">Índices Agronômicos</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">

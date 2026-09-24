@@ -15,7 +15,7 @@ import { transactionsApi, salesApi, plotsApi, seasonsApi, costApi } from '../../
 import type { FinancialTransaction, Sale, Plot, Season, PlotSeasonCost } from '../../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Mock fallback
+// Dados mock de fallback
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MOCK_TRANSACTIONS: FinancialTransaction[] = [
@@ -51,7 +51,7 @@ const PLOT_PROFITABILITY = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helpers
+// Auxiliares
 // ─────────────────────────────────────────────────────────────────────────────
 
 const fmt = (n: number) => `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`;
@@ -92,7 +92,7 @@ function buildMonthly(txs: FinancialTransaction[]) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Page
+// Página
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function FinanceiroDashboard() {
@@ -177,7 +177,7 @@ export function FinanceiroDashboard() {
     return () => { cancelled = true; };
   }, [plots, selectedSeasonId]);
 
-  // ── Computed KPIs ──────────────────────────────────────────────────────────
+  // ── KPIs calculados ──────────────────────────────────────────────────────────
   const revenue    = transactions.filter((t) => t.type === 'INCOME').reduce((s, t) => s + Number(t.amount), 0);
   const totalCost  = transactions.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + Number(t.amount), 0);
   const profit     = revenue - totalCost;
@@ -196,7 +196,7 @@ export function FinanceiroDashboard() {
   })();
   const seasonName = seasons.find((s) => s.id === selectedSeasonId)?.name;
 
-  // ── Cost breakdown ─────────────────────────────────────────────────────────
+  // ── Composição de custos ─────────────────────────────────────────────────────────
   const costByCategory = new Map<string, number>();
   transactions
     .filter((t) => t.type === 'EXPENSE')
@@ -233,7 +233,7 @@ export function FinanceiroDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* ── Header ──────────────────────────────────────────────────────── */}
+      {/* ── Cabeçalho ──────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 text-text-muted text-sm mb-1">
@@ -268,19 +268,19 @@ export function FinanceiroDashboard() {
         </div>
       </div>
 
-      {/* ── KPI Row ─────────────────────────────────────────────────────── */}
+      {/* ── Linha de KPIs ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         <KPICard title="Custo Total"       value={`R$ ${(totalCost/1000).toFixed(0)}k`}  unit=""             subtitle="Insumos + Mão de obra"   icon={<DollarSign size={18} />} variant="default" />
         <KPICard title="Custo / Saca"      value={costPerSack != null ? `R$ ${costPerSack.toFixed(0)}` : '—'} unit="" subtitle={totalSacks > 0 ? `${totalSacks} sacas` : 'Sem produção lançada'}  icon={<Target size={18} />}     variant="default" />
         <KPICard title="Receita Total"     value={`R$ ${(revenue/1000).toFixed(0)}k`}     unit=""             subtitle="Vendas realizadas"       icon={<TrendingUp size={18} />} variant="positive" />
         <KPICard title="Lucro / Prejuízo"  value={`R$ ${(profit/1000).toFixed(0)}k`}      unit=""             subtitle={`Margem ${margin.toFixed(1)}%`} icon={profit >= 0 ? <TrendingUp size={18} /> : <TrendingDown size={18} />} variant={profit >= 0 ? 'positive' : 'negative'} accent={profit >= 0} />
         <KPICard title="Margem Líquida"    value={`${margin.toFixed(1)}`}                 unit="%"            subtitle="Sobre receita bruta"    icon={<BarChart3 size={18} />}  variant={margin >= 40 ? 'positive' : margin >= 20 ? 'gold' : 'negative'} />
-        <KPICard title="Ponto de Equilíbrio" value={`R$ ${(breakEven/1000).toFixed(0)}k`} unit=""            subtitle="Break-even safra"       icon={<AlertCircle size={18} />} variant="gold" />
+        <KPICard title="Ponto de Equilíbrio" value={`R$ ${(breakEven/1000).toFixed(0)}k`} unit=""            subtitle="Equilíbrio da safra"       icon={<AlertCircle size={18} />} variant="gold" />
       </div>
 
-      {/* ── Charts Row ──────────────────────────────────────────────────── */}
+      {/* ── Linha de gráficos ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Cost Pie */}
+        {/* Gráfico de pizza de custos */}
         <ChartCard title="Composição de Custos" subtitle="Distribuição por categoria" className="lg:col-span-2" minHeight={280}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -321,7 +321,7 @@ export function FinanceiroDashboard() {
           </ResponsiveContainer>
         </ChartCard>
 
-        {/* Composed chart: Cost vs Revenue */}
+        {/* Gráfico combinado: custo vs receita */}
         <ChartCard title="Evolução Mensal" subtitle="Custo vs Receita (R$)" className="lg:col-span-3" minHeight={280}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={monthlyData}>
@@ -342,7 +342,7 @@ export function FinanceiroDashboard() {
         </ChartCard>
       </div>
 
-      {/* ── Profitability Table ──────────────────────────────────────────── */}
+      {/* ── Tabela de rentabilidade ──────────────────────────────────────────── */}
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h3 className="section-title">Rentabilidade por Talhão</h3>
@@ -390,9 +390,9 @@ export function FinanceiroDashboard() {
         </div>
       </div>
 
-      {/* ── Bottom Row: Inputs detail + DRE ─────────────────────────────── */}
+      {/* ── Linha inferior: detalhamento de gastos + DRE ─────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Expense detail */}
+        {/* Detalhamento de gastos */}
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-border">
             <h3 className="section-title">Detalhamento de Gastos</h3>

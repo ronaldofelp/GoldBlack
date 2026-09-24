@@ -14,7 +14,7 @@ export function TrackingTimeline({ currentStage, events }: TrackingTimelineProps
 
   return (
     <div className="relative pl-4 sm:pl-6 py-4">
-      {/* Vertical line connector */}
+      {/* Conector de linha vertical */}
       <div className="absolute left-[27px] sm:left-[35px] top-8 bottom-8 w-px bg-border z-0" />
 
       <div className="space-y-8 relative z-10">
@@ -23,12 +23,12 @@ export function TrackingTimeline({ currentStage, events }: TrackingTimelineProps
           const isCurrent = index === currentIndex && stage !== 'FINALIZADO';
           const isPending = index > currentIndex;
 
-          // Find event for this stage if it happened
+          // Busca o evento desta etapa, se ocorreu
           const event = events.find((e) => e.stage === stage);
 
           return (
             <div key={stage} className="flex gap-4 sm:gap-6">
-              {/* Timeline dot */}
+              {/* Marcador da linha do tempo */}
               <div className="flex-shrink-0 mt-0.5">
                 {isCompleted ? (
                   <div className="w-8 h-8 rounded-full bg-gold text-background flex items-center justify-center shadow-md">
@@ -47,7 +47,7 @@ export function TrackingTimeline({ currentStage, events }: TrackingTimelineProps
                 )}
               </div>
 
-              {/* Content */}
+              {/* Conteúdo */}
               <div className={clsx("flex-1 pb-2", isPending && "opacity-50")}>
                 <h4 className={clsx(
                   "text-base font-semibold",

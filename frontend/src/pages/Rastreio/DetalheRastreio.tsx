@@ -68,7 +68,7 @@ export function DetalheRastreio() {
         });
         
         doc.setFontSize(22);
-        doc.text('GoldBlack Coffee Tracking', 105, 30, { align: 'center' });
+        doc.text('GoldBlack — Rastreio de Café', 105, 30, { align: 'center' });
         
         doc.setFontSize(16);
         doc.text(`Rastreio: ${data.tracking_code}`, 105, 45, { align: 'center' });
@@ -109,7 +109,7 @@ export function DetalheRastreio() {
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto w-full flex flex-col h-[calc(100vh-64px)] overflow-y-auto">
-      {/* Header */}
+      {/* Cabeçalho */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-4">
           <button 
@@ -153,10 +153,10 @@ export function DetalheRastreio() {
         </div>
       </div>
 
-      {/* Main Content Layout */}
+      {/* Layout do conteúdo principal */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-        
-        {/* Left Column: Timeline */}
+
+        {/* Coluna à esquerda: linha do tempo */}
         <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6 shadow-card relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gold/50 via-gold to-gold/50" />
           
@@ -168,7 +168,7 @@ export function DetalheRastreio() {
           />
         </div>
 
-        {/* Right Column: Info & QR Code */}
+        {/* Coluna à direita: informações e QR Code */}
         <div className="space-y-6">
           <div className="bg-card border border-border rounded-xl p-6 shadow-card">
             <h3 className="font-semibold text-text-primary mb-4">Informações</h3>

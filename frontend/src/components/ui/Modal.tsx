@@ -40,13 +40,13 @@ export function Modal({ isOpen, onClose, title, children, width = 'md' }: ModalP
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
+      {/* Fundo escurecido */}
       <div 
         className="absolute inset-0 bg-background/80 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
       
-      {/* Modal Dialog */}
+      {/* Diálogo modal */}
       <div 
         ref={modalRef}
         className={clsx(
@@ -54,7 +54,7 @@ export function Modal({ isOpen, onClose, title, children, width = 'md' }: ModalP
           widthClasses[width]
         )}
       >
-        {/* Header */}
+        {/* Cabeçalho */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <h2 className="text-xl font-bold text-text-primary">{title}</h2>
           <button 
@@ -65,7 +65,7 @@ export function Modal({ isOpen, onClose, title, children, width = 'md' }: ModalP
           </button>
         </div>
 
-        {/* Content */}
+        {/* Conteúdo */}
         <div className="p-6 overflow-y-auto">
           {children}
         </div>

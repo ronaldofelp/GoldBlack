@@ -1,4 +1,5 @@
-import { Droplets, CloudRain, Wind } from 'lucide-react';
+import { Droplets, CloudRain, Wind, Sun, CloudSun, Cloud } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { clsx } from 'clsx';
 
 interface WeatherWidgetProps {
@@ -26,7 +27,7 @@ export function WeatherWidget({
 
   return (
     <div className="card p-5 flex flex-col gap-4">
-      {/* Header */}
+      {/* Cabeçalho */}
       <div className="flex items-start justify-between">
         <div>
           <p className="label">Condição Atual</p>
@@ -35,12 +36,11 @@ export function WeatherWidget({
         <p className="text-xs text-text-muted text-right capitalize">{today}</p>
       </div>
 
-      {/* Main temp */}
+      {/* Temperatura principal */}
       <div className="flex items-center gap-4">
         <div className="relative">
-          {/* Sun/cloud icon drawn with CSS */}
           <div className="w-14 h-14 rounded-full bg-warning/20 flex items-center justify-center">
-            <span className="text-2xl">☀️</span>
+            <Sun size={28} className="text-warning" />
           </div>
         </div>
         <div>
@@ -51,7 +51,7 @@ export function WeatherWidget({
         </div>
       </div>
 
-      {/* Metrics grid */}
+      {/* Grade de métricas */}
       <div className="grid grid-cols-3 gap-3 pt-3 border-t border-border">
         {[
           { icon: <Droplets size={14} />, label: 'Umidade', value: `${humidity}%`, color: 'text-info' },
@@ -68,20 +68,23 @@ export function WeatherWidget({
         ))}
       </div>
 
-      {/* Forecast mini */}
+      {/* Mini previsão */}
       <div className="flex gap-1 pt-2 border-t border-border">
-        {['Seg', 'Ter', 'Qua', 'Qui', 'Sex'].map((day, i) => (
-          <div key={day} className={clsx(
-            'flex-1 flex flex-col items-center gap-0.5 py-1.5 px-1 rounded',
-            i === 0 ? 'bg-gold/10' : 'hover:bg-border',
-          )}>
-            <span className="text-text-muted text-xs">{day}</span>
-            <span className="text-sm">{['☀️','🌤️','🌦️','☀️','☁️'][i]}</span>
-            <span className={clsx('text-xs font-semibold', i === 0 ? 'text-gold' : 'text-text-primary')}>
-              {[temperature, temperature - 2, temperature - 1, temperature + 1, temperature - 3][i]}°
-            </span>
-          </div>
-        ))}
+        {(['Seg', 'Ter', 'Qua', 'Qui', 'Sex'] as const).map((day, i) => {
+          const ForecastIcon: LucideIcon = [Sun, CloudSun, CloudRain, Sun, Cloud][i];
+          return (
+            <div key={day} className={clsx(
+              'flex-1 flex flex-col items-center gap-0.5 py-1.5 px-1 rounded',
+              i === 0 ? 'bg-gold/10' : 'hover:bg-border',
+            )}>
+              <span className="text-text-muted text-xs">{day}</span>
+              <ForecastIcon size={16} className={i === 0 ? 'text-gold' : 'text-text-muted'} />
+              <span className={clsx('text-xs font-semibold', i === 0 ? 'text-gold' : 'text-text-primary')}>
+                {[temperature, temperature - 2, temperature - 1, temperature + 1, temperature - 3][i]}°
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

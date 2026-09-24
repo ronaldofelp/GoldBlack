@@ -46,7 +46,7 @@ export function Rastreio() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Tabs */}
+      {/* Abas */}
       <div className="px-6 pt-6 bg-card border-b border-border flex gap-6">
         <button
           onClick={() => setActiveTab('IN_PROGRESS')}

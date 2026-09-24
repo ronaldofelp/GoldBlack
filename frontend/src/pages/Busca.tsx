@@ -39,7 +39,7 @@ export function Busca() {
         const qLower = query.toLowerCase();
         const searchResults: SearchResult[] = [];
 
-        // Search Plots
+        // Busca talhões
         plotsRes.data.forEach((plot: Plot) => {
           if (plot.code.toLowerCase().includes(qLower) || (plot.variety && plot.variety.toLowerCase().includes(qLower))) {
             searchResults.push({
@@ -53,7 +53,7 @@ export function Busca() {
           }
         });
 
-        // Search Activities
+        // Busca atividades
         activitiesRes.data.forEach((act: AgriculturalActivity) => {
           if (act.type.toLowerCase().includes(qLower) || act.status.toLowerCase().includes(qLower)) {
             searchResults.push({
@@ -67,7 +67,7 @@ export function Busca() {
           }
         });
 
-        // Search Sales
+        // Busca vendas
         salesRes.data.forEach((sale: Sale) => {
           if (sale.customer.toLowerCase().includes(qLower) || (sale.sale_invoice && sale.sale_invoice.toLowerCase().includes(qLower))) {
             searchResults.push({

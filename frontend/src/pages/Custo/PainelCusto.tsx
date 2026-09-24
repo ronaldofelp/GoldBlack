@@ -56,7 +56,7 @@ export function PainelCusto() {
 
   return (
     <div className="p-6 max-w-[1600px] mx-auto w-full">
-      {/* Header */}
+      {/* Cabeçalho */}
       <div className="flex items-center gap-3 mb-6">
         <div className="w-10 h-10 rounded-lg bg-card border border-border flex items-center justify-center text-gold shadow-sm">
           <Calculator size={24} />

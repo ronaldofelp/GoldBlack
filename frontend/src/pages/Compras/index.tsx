@@ -4,7 +4,7 @@ import { EntityPageLayout } from '../../components/layout/EntityPageLayout';
 import { Modal } from '../../components/ui/Modal';
 import { EntityForm, type FieldDef } from '../../components/ui/EntityForm';
 
-// Mock type for purchases
+// Tipo mock para compras
 interface Purchase {
   id: string;
   supplier: string;
@@ -50,7 +50,7 @@ export function Compras() {
 
   const loadData = async () => {
     setLoading(true);
-    // Simulate network latency then load mock data
+    // Simula latência de rede e então carrega os dados mock
     setTimeout(() => {
       setData([
         {

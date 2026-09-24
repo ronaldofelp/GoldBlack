@@ -46,7 +46,7 @@ export function Topbar({ apiOnline }: TopbarProps) {
 
   return (
     <header className="h-16 bg-card border-b border-border flex items-center px-6 gap-4 flex-shrink-0">
-      {/* Breadcrumb / Search */}
+      {/* Trilha de navegação / Busca */}
       <div className="flex-1 flex items-center gap-3">
         <form onSubmit={handleSearchSubmit} className="relative hidden md:flex items-center">
           <Search size={15} className="absolute left-3 text-text-muted" />
@@ -60,26 +60,26 @@ export function Topbar({ apiOnline }: TopbarProps) {
         </form>
       </div>
 
-      {/* Right area */}
+      {/* Área à direita */}
       <div className="flex items-center gap-3">
 
-        {/* Season badge */}
+        {/* Selo da safra */}
         <div className="badge badge-gold">
           Safra 2025/2026
         </div>
 
-        {/* Notifications */}
+        {/* Notificações */}
         <button className="relative flex items-center justify-center w-9 h-9 rounded-lg hover:bg-border transition-colors">
           <Bell size={18} className="text-text-muted" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-gold pulse-dot" />
         </button>
 
-        {/* Theme toggle (placeholder) */}
+        {/* Alternador de tema (reservado) */}
         <button className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-border transition-colors">
           <Sun size={18} className="text-text-muted" />
         </button>
 
-        {/* User */}
+        {/* Usuário */}
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setShowUser((v) => !v)}
