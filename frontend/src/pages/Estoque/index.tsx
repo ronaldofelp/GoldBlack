@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Warehouse, MoreHorizontal, Package } from 'lucide-react';
+import { Warehouse, Eye } from 'lucide-react';
 import { EntityPageLayout } from '../../components/layout/EntityPageLayout';
 import { suppliesApi } from '../../services/api';
 import type { AgriculturalSupply } from '../../types';
 import { Modal } from '../../components/ui/Modal';
+import { DetailModal } from '../../components/ui/DetailModal';
 import { EntityForm, type FieldDef } from '../../components/ui/EntityForm';
+
+const CATEGORY_LABELS: Record<string, string> = {
+  FERTILIZER: 'Fertilizante',
+  PESTICIDE: 'Defensivo',
+};
 
 export function Estoque() {
   const [data, setData] = useState<AgriculturalSupply[]>([]);
@@ -12,6 +18,7 @@ export function Estoque() {
 
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selected, setSelected] = useState<AgriculturalSupply | null>(null);
 
   const formFields: FieldDef[] = [
     { name: 'name', label: 'Nome do Insumo', type: 'text', required: true },
@@ -103,8 +110,12 @@ export function Estoque() {
             R$ {(supply.stock_quantity * supply.unit_cost).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </td>
           <td className="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-card group-hover:bg-card-hover transition-colors">
-            <button className="p-1 rounded text-text-muted hover:text-gold transition-colors">
-              <MoreHorizontal size={18} />
+            <button
+              onClick={() => setSelected(supply)}
+              title="Ver detalhes"
+              className="p-1.5 rounded text-text-muted hover:text-gold hover:bg-gold/10 transition-colors"
+            >
+              <Eye size={16} />
             </button>
           </td>
         </tr>
@@ -118,6 +129,20 @@ export function Estoque() {
           onCancel={() => setIsModalOpen(false)}
         />
       </Modal>
+
+      <DetailModal
+        isOpen={selected !== null}
+        onClose={() => setSelected(null)}
+        title={selected ? selected.name : ''}
+        items={selected ? [
+          { label: 'Insumo', value: selected.name },
+          { label: 'Categoria', value: CATEGORY_LABELS[selected.category] ?? selected.category },
+          { label: 'Em Estoque', value: `${selected.stock_quantity.toLocaleString('pt-BR')} ${selected.unit_of_measure}` },
+          { label: 'Custo Unitário', value: `R$ ${selected.unit_cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` },
+          { label: 'Valor Total em Estoque', value: `R$ ${(selected.stock_quantity * selected.unit_cost).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` },
+          { label: 'ID do Insumo', value: selected.id },
+        ] : []}
+      />
     </>
   );
 }

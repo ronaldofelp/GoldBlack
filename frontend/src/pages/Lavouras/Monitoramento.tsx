@@ -1,13 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { LineChart, MoreHorizontal, AlertTriangle, Calendar } from 'lucide-react';
+import { LineChart, Eye, Check, AlertTriangle, Calendar } from 'lucide-react';
 import { EntityPageLayout } from '../../components/layout/EntityPageLayout';
+import { DetailModal } from '../../components/ui/DetailModal';
 import { alertsApi } from '../../services/api';
 import type { SystemAlert } from '../../types';
+
+const TYPE_LABELS: Record<string, string> = {
+  WEATHER: 'Climático',
+  AGRONOMIC: 'Agronômico',
+  SYSTEM: 'Sistema',
+};
 
 export function Monitoramento() {
   const [data, setData] = useState<SystemAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<SystemAlert | null>(null);
 
   const loadData = async () => {
     try {
@@ -19,6 +27,15 @@ export function Monitoramento() {
       setError(err.message || 'Erro ao carregar alertas e monitoramento');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMarkRead = async (alert: SystemAlert) => {
+    try {
+      await alertsApi.markRead(alert.id);
+      loadData();
+    } catch (err: any) {
+      setError(err.message || 'Erro ao marcar alerta como lido');
     }
   };
 
@@ -40,6 +57,7 @@ export function Monitoramento() {
   };
 
   return (
+    <>
     <EntityPageLayout
       title="Monitoramento e Alertas"
       description="Acompanhamento climático, alertas agronômicos e notificações"
@@ -78,12 +96,41 @@ export function Monitoramento() {
             )}
           </td>
           <td className="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-card group-hover:bg-card-hover transition-colors">
-            <button className="p-1 rounded text-text-muted hover:text-gold transition-colors">
-              <MoreHorizontal size={18} />
-            </button>
+            <div className="flex items-center justify-end gap-1">
+              {!alert.is_read && (
+                <button
+                  onClick={() => handleMarkRead(alert)}
+                  title="Marcar como lida"
+                  className="p-1.5 rounded text-text-muted hover:text-positive-light hover:bg-positive/10 transition-colors"
+                >
+                  <Check size={16} />
+                </button>
+              )}
+              <button
+                onClick={() => setSelected(alert)}
+                title="Ver detalhes"
+                className="p-1.5 rounded text-text-muted hover:text-gold hover:bg-gold/10 transition-colors"
+              >
+                <Eye size={16} />
+              </button>
+            </div>
           </td>
         </tr>
       )}
     />
+
+      <DetailModal
+        isOpen={selected !== null}
+        onClose={() => setSelected(null)}
+        title="Detalhes do Alerta"
+        items={selected ? [
+          { label: 'Data', value: new Date(selected.created_at).toLocaleString('pt-BR') },
+          { label: 'Tipo', value: TYPE_LABELS[selected.alert_type] ?? selected.alert_type },
+          { label: 'Status', value: selected.is_read ? 'Lido' : 'Novo' },
+          { label: 'Mensagem', value: selected.message, full: true },
+          { label: 'ID', value: selected.id },
+        ] : []}
+      />
+    </>
   );
 }

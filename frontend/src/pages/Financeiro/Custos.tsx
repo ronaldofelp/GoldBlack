@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { DollarSign, MoreHorizontal, Calendar, ArrowDownRight } from 'lucide-react';
+import { DollarSign, Eye, Calendar } from 'lucide-react';
 import { EntityPageLayout } from '../../components/layout/EntityPageLayout';
+import { DetailModal } from '../../components/ui/DetailModal';
 import { transactionsApi } from '../../services/api';
 import type { FinancialTransaction } from '../../types';
 
@@ -8,6 +9,7 @@ export function Custos() {
   const [data, setData] = useState<FinancialTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<FinancialTransaction | null>(null);
 
   const loadData = async () => {
     try {
@@ -43,6 +45,7 @@ export function Custos() {
   };
 
   return (
+    <>
     <EntityPageLayout
       title="Despesas Operacionais"
       description="Despesas lançadas — insumos, mão de obra e manutenção"
@@ -75,12 +78,30 @@ export function Custos() {
             {getStatusBadge(tx.status)}
           </td>
           <td className="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-card group-hover:bg-card-hover transition-colors">
-            <button className="p-1 rounded text-text-muted hover:text-gold transition-colors">
-              <MoreHorizontal size={18} />
+            <button
+              onClick={() => setSelected(tx)}
+              title="Ver detalhes"
+              className="p-1.5 rounded text-text-muted hover:text-gold hover:bg-gold/10 transition-colors"
+            >
+              <Eye size={16} />
             </button>
           </td>
         </tr>
       )}
     />
+
+      <DetailModal
+        isOpen={selected !== null}
+        onClose={() => setSelected(null)}
+        title="Detalhes da Despesa"
+        items={selected ? [
+          { label: 'Data de Vencimento', value: new Date(selected.due_date).toLocaleDateString('pt-BR') },
+          { label: 'Categoria', value: getCategoryLabel(selected.category) },
+          { label: 'Custo', value: `R$ ${selected.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` },
+          { label: 'Status', value: selected.status === 'PAID' ? 'Pago' : 'A Pagar' },
+          { label: 'ID da Transação', value: selected.id },
+        ] : []}
+      />
+    </>
   );
 }

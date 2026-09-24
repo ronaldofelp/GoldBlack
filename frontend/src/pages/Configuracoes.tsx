@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Settings, MoreHorizontal, Shield, User } from 'lucide-react';
+import { Settings, Eye } from 'lucide-react';
 import { EntityPageLayout } from '../components/layout/EntityPageLayout';
+import { DetailModal } from '../components/ui/DetailModal';
 
 interface ConfigItem {
   id: string;
@@ -13,6 +14,7 @@ interface ConfigItem {
 export function Configuracoes() {
   const [data, setData] = useState<ConfigItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<ConfigItem | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -49,6 +51,7 @@ export function Configuracoes() {
   }, []);
 
   return (
+    <>
     <EntityPageLayout
       title="Configurações do Sistema"
       description="Gerencie parâmetros gerais, usuários e preferências"
@@ -83,12 +86,29 @@ export function Configuracoes() {
             {new Date(config.lastUpdated).toLocaleDateString()}
           </td>
           <td className="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-card group-hover:bg-card-hover transition-colors">
-            <button className="p-1 rounded text-text-muted hover:text-gold transition-colors">
-              <MoreHorizontal size={18} />
+            <button
+              onClick={() => setSelected(config)}
+              title="Ver detalhes"
+              className="p-1.5 rounded text-text-muted hover:text-gold hover:bg-gold/10 transition-colors"
+            >
+              <Eye size={16} />
             </button>
           </td>
         </tr>
       )}
     />
+
+      <DetailModal
+        isOpen={selected !== null}
+        onClose={() => setSelected(null)}
+        title="Detalhes do Parâmetro"
+        items={selected ? [
+          { label: 'Módulo', value: selected.module },
+          { label: 'Parâmetro', value: selected.parameter },
+          { label: 'Valor Atual', value: selected.value },
+          { label: 'Última Atualização', value: new Date(selected.lastUpdated).toLocaleDateString('pt-BR') },
+        ] : []}
+      />
+    </>
   );
 }

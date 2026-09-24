@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Building2, MoreHorizontal } from 'lucide-react';
+import { Building2, Eye } from 'lucide-react';
 import { EntityPageLayout } from '../../components/layout/EntityPageLayout';
 import { farmsApi } from '../../services/api';
 import type { Farm } from '../../types';
 import { Modal } from '../../components/ui/Modal';
+import { DetailModal } from '../../components/ui/DetailModal';
 import { EntityForm, type FieldDef } from '../../components/ui/EntityForm';
 
 export function Propriedades() {
@@ -11,6 +12,7 @@ export function Propriedades() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selected, setSelected] = useState<Farm | null>(null);
 
   const formFields: FieldDef[] = [
     { name: 'name', label: 'Nome da Propriedade', type: 'text', required: true },
@@ -75,14 +77,18 @@ export function Propriedades() {
             {Number(farm.total_area_ha).toFixed(2)} ha
           </td>
           <td className="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-card group-hover:bg-card-hover transition-colors">
-            <button className="p-1 rounded text-text-muted hover:text-gold transition-colors">
-              <MoreHorizontal size={18} />
+            <button
+              onClick={() => setSelected(farm)}
+              title="Ver detalhes"
+              className="p-1.5 rounded text-text-muted hover:text-gold hover:bg-gold/10 transition-colors"
+            >
+              <Eye size={16} />
             </button>
           </td>
         </tr>
       )}
     />
-    
+
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Nova Propriedade">
         <EntityForm
           fields={formFields}
@@ -90,6 +96,18 @@ export function Propriedades() {
           onCancel={() => setIsModalOpen(false)}
         />
       </Modal>
+
+      <DetailModal
+        isOpen={selected !== null}
+        onClose={() => setSelected(null)}
+        title={selected ? selected.name : ''}
+        items={selected ? [
+          { label: 'Nome da Propriedade', value: selected.name },
+          { label: 'Área Total', value: `${Number(selected.total_area_ha).toFixed(2)} ha` },
+          { label: 'ID do Produtor', value: selected.producer_id },
+          { label: 'ID da Propriedade', value: selected.id },
+        ] : []}
+      />
     </>
   );
 }

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { TestTube, MoreHorizontal, Calendar, ExternalLink } from 'lucide-react';
+import { TestTube, Eye, Calendar, ExternalLink } from 'lucide-react';
 import { EntityPageLayout } from '../../components/layout/EntityPageLayout';
 import { soilAnalysesApi } from '../../services/api';
 import { Modal } from '../../components/ui/Modal';
+import { DetailModal } from '../../components/ui/DetailModal';
 import { EntityForm, type FieldDef } from '../../components/ui/EntityForm';
 
 // Tipos mock locais até a API estar totalmente ligada para este endpoint específico
@@ -21,6 +22,7 @@ export function Solo() {
 
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selected, setSelected] = useState<SoilAnalysis | null>(null);
 
   const formFields: FieldDef[] = [
     { name: 'plot_id', label: 'ID do Talhão', type: 'text', required: true },
@@ -100,14 +102,22 @@ export function Solo() {
             {soil.organic_matter != null ? `${Number(soil.organic_matter).toFixed(1)}%` : '-'}
           </td>
           <td className="px-6 py-4 whitespace-nowrap text-center">
-            <a href={soil.report_url} className="inline-flex items-center gap-1 text-gold hover:text-gold-light transition-colors text-sm">
-              <ExternalLink size={14} />
-              <span>Ver PDF</span>
-            </a>
+            {soil.report_url ? (
+              <a href={soil.report_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-gold hover:text-gold-light transition-colors text-sm">
+                <ExternalLink size={14} />
+                <span>Ver PDF</span>
+              </a>
+            ) : (
+              <span className="text-text-muted text-sm">—</span>
+            )}
           </td>
           <td className="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-card group-hover:bg-card-hover transition-colors">
-            <button className="p-1 rounded text-text-muted hover:text-gold transition-colors">
-              <MoreHorizontal size={18} />
+            <button
+              onClick={() => setSelected(soil)}
+              title="Ver detalhes"
+              className="p-1.5 rounded text-text-muted hover:text-gold hover:bg-gold/10 transition-colors"
+            >
+              <Eye size={16} />
             </button>
           </td>
         </tr>
@@ -121,6 +131,24 @@ export function Solo() {
           onCancel={() => setIsModalOpen(false)}
         />
       </Modal>
+
+      <DetailModal
+        isOpen={selected !== null}
+        onClose={() => setSelected(null)}
+        title="Detalhes da Análise de Solo"
+        items={selected ? [
+          { label: 'ID do Talhão', value: selected.plot_id },
+          { label: 'Data da Coleta', value: new Date(selected.collection_date).toLocaleDateString('pt-BR') },
+          { label: 'pH', value: selected.ph },
+          { label: 'Matéria Orgânica', value: selected.organic_matter != null ? `${Number(selected.organic_matter).toFixed(1)}%` : null },
+          { label: 'Laudo (PDF)', value: selected.report_url
+              ? <a href={selected.report_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-gold hover:text-gold-light">
+                  <ExternalLink size={14} /> Abrir laudo
+                </a>
+              : null, full: true },
+          { label: 'ID da Análise', value: selected.id },
+        ] : []}
+      />
     </>
   );
 }

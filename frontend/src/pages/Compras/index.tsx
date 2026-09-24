@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { ShoppingCart, MoreHorizontal, Calendar, Receipt } from 'lucide-react';
+import { ShoppingCart, Eye, Calendar, Receipt } from 'lucide-react';
 import { EntityPageLayout } from '../../components/layout/EntityPageLayout';
 import { Modal } from '../../components/ui/Modal';
+import { DetailModal } from '../../components/ui/DetailModal';
 import { EntityForm, type FieldDef } from '../../components/ui/EntityForm';
 
 // Tipo mock para compras
@@ -20,6 +21,7 @@ export function Compras() {
 
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selected, setSelected] = useState<Purchase | null>(null);
 
   const formFields: FieldDef[] = [
     { name: 'supplier', label: 'Fornecedor', type: 'text', required: true },
@@ -124,8 +126,12 @@ export function Compras() {
             {getStatusBadge(purchase.status)}
           </td>
           <td className="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-card group-hover:bg-card-hover transition-colors">
-            <button className="p-1 rounded text-text-muted hover:text-gold transition-colors">
-              <MoreHorizontal size={18} />
+            <button
+              onClick={() => setSelected(purchase)}
+              title="Ver detalhes"
+              className="p-1.5 rounded text-text-muted hover:text-gold hover:bg-gold/10 transition-colors"
+            >
+              <Eye size={16} />
             </button>
           </td>
         </tr>
@@ -139,6 +145,19 @@ export function Compras() {
           onCancel={() => setIsModalOpen(false)}
         />
       </Modal>
+
+      <DetailModal
+        isOpen={selected !== null}
+        onClose={() => setSelected(null)}
+        title="Detalhes da Compra"
+        items={selected ? [
+          { label: 'Fornecedor', value: selected.supplier },
+          { label: 'Nota Fiscal', value: selected.invoice },
+          { label: 'Data do Pedido', value: new Date(selected.date).toLocaleDateString('pt-BR') },
+          { label: 'Valor Total', value: `R$ ${selected.total_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` },
+          { label: 'Status', value: selected.status === 'DELIVERED' ? 'Entregue' : 'Pendente' },
+        ] : []}
+      />
     </>
   );
 }

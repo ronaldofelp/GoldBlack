@@ -1,16 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, MoreHorizontal } from 'lucide-react';
+import { MapPin, Eye } from 'lucide-react';
 import { EntityPageLayout } from '../../components/layout/EntityPageLayout';
 import { plotsApi } from '../../services/api';
 import type { Plot } from '../../types';
 import { Modal } from '../../components/ui/Modal';
+import { DetailModal } from '../../components/ui/DetailModal';
 import { EntityForm, type FieldDef } from '../../components/ui/EntityForm';
+
+const STATUS_LABELS: Record<string, string> = {
+  IN_PRODUCTION: 'Em Produção',
+  DEVELOPMENT: 'Formação',
+  RENOVATION: 'Renovação',
+};
 
 export function Talhoes() {
   const [data, setData] = useState<Plot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selected, setSelected] = useState<Plot | null>(null);
 
   const formFields: FieldDef[] = [
     { name: 'code', label: 'Código do Talhão', type: 'text', required: true },
@@ -104,8 +112,12 @@ export function Talhoes() {
             {getStatusBadge(plot.status)}
           </td>
           <td className="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-card group-hover:bg-card-hover transition-colors">
-            <button className="p-1 rounded text-text-muted hover:text-gold transition-colors">
-              <MoreHorizontal size={18} />
+            <button
+              onClick={() => setSelected(plot)}
+              title="Ver detalhes"
+              className="p-1.5 rounded text-text-muted hover:text-gold hover:bg-gold/10 transition-colors"
+            >
+              <Eye size={16} />
             </button>
           </td>
         </tr>
@@ -119,6 +131,21 @@ export function Talhoes() {
           onCancel={() => setIsModalOpen(false)}
         />
       </Modal>
+
+      <DetailModal
+        isOpen={selected !== null}
+        onClose={() => setSelected(null)}
+        title={selected ? `Talhão ${selected.code}` : ''}
+        items={selected ? [
+          { label: 'Código', value: selected.code },
+          { label: 'Variedade', value: selected.variety },
+          { label: 'Área', value: `${Number(selected.area_ha).toFixed(2)} ha` },
+          { label: 'Ano de Plantio', value: selected.planting_year },
+          { label: 'Status', value: STATUS_LABELS[selected.status] ?? selected.status },
+          { label: 'ID da Propriedade', value: selected.farm_id },
+          { label: 'ID do Talhão', value: selected.id },
+        ] : []}
+      />
     </>
   );
 }

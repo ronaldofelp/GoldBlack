@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { PackageSearch, MoreHorizontal, Calendar, Receipt } from 'lucide-react';
+import { PackageSearch, Eye, Calendar, Receipt } from 'lucide-react';
 import { EntityPageLayout } from '../../components/layout/EntityPageLayout';
 import { salesApi } from '../../services/api';
 import type { Sale } from '../../types';
 import { Modal } from '../../components/ui/Modal';
+import { DetailModal } from '../../components/ui/DetailModal';
 import { EntityForm, type FieldDef } from '../../components/ui/EntityForm';
 
 export function Vendas() {
@@ -11,6 +12,7 @@ export function Vendas() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selected, setSelected] = useState<Sale | null>(null);
 
   const formFields: FieldDef[] = [
     { name: 'batch_id', label: 'ID do Lote', type: 'text', required: true },
@@ -84,8 +86,12 @@ export function Vendas() {
             R$ {sale.total_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </td>
           <td className="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-card group-hover:bg-card-hover transition-colors">
-            <button className="p-1 rounded text-text-muted hover:text-gold transition-colors">
-              <MoreHorizontal size={18} />
+            <button
+              onClick={() => setSelected(sale)}
+              title="Ver detalhes"
+              className="p-1.5 rounded text-text-muted hover:text-gold hover:bg-gold/10 transition-colors"
+            >
+              <Eye size={16} />
             </button>
           </td>
         </tr>
@@ -99,6 +105,22 @@ export function Vendas() {
           onCancel={() => setIsModalOpen(false)}
         />
       </Modal>
+
+      <DetailModal
+        isOpen={selected !== null}
+        onClose={() => setSelected(null)}
+        title="Detalhes da Venda"
+        items={selected ? [
+          { label: 'Cliente', value: selected.customer },
+          { label: 'Data da Venda', value: new Date(selected.sale_date).toLocaleDateString('pt-BR') },
+          { label: 'Valor Total', value: `R$ ${selected.total_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` },
+          { label: 'Nota Fiscal', value: selected.sale_invoice },
+          { label: 'Nota de Remessa', value: selected.shipment_invoice },
+          { label: 'Armazém de Destino', value: selected.destination_warehouse },
+          { label: 'ID do Lote', value: selected.batch_id },
+          { label: 'ID da Venda', value: selected.id },
+        ] : []}
+      />
     </>
   );
 }

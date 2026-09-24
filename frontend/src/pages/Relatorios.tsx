@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { BarChart3, MoreHorizontal, Download, FileText } from 'lucide-react';
+import { BarChart3, Eye, FileText } from 'lucide-react';
 import { EntityPageLayout } from '../components/layout/EntityPageLayout';
+import { DetailModal } from '../components/ui/DetailModal';
 
 interface Report {
   id: string;
@@ -13,6 +14,7 @@ interface Report {
 export function Relatorios() {
   const [data, setData] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Report | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -49,6 +51,7 @@ export function Relatorios() {
   }, []);
 
   return (
+    <>
     <EntityPageLayout
       title="Relatórios e Exportações"
       description="Gere e exporte relatórios consolidados do sistema"
@@ -82,17 +85,29 @@ export function Relatorios() {
             </span>
           </td>
           <td className="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-card group-hover:bg-card-hover transition-colors">
-            <div className="flex items-center justify-end gap-2">
-              <button className="p-1.5 rounded text-gold hover:bg-gold/10 transition-colors" title="Download">
-                <Download size={16} />
-              </button>
-              <button className="p-1 rounded text-text-muted hover:text-gold transition-colors">
-                <MoreHorizontal size={18} />
-              </button>
-            </div>
+            <button
+              onClick={() => setSelected(report)}
+              title="Ver detalhes"
+              className="p-1.5 rounded text-text-muted hover:text-gold hover:bg-gold/10 transition-colors"
+            >
+              <Eye size={16} />
+            </button>
           </td>
         </tr>
       )}
     />
+
+      <DetailModal
+        isOpen={selected !== null}
+        onClose={() => setSelected(null)}
+        title="Detalhes do Relatório"
+        items={selected ? [
+          { label: 'Nome', value: selected.name, full: true },
+          { label: 'Categoria', value: selected.category },
+          { label: 'Data de Geração', value: new Date(selected.date).toLocaleDateString('pt-BR') },
+          { label: 'Formato', value: selected.format },
+        ] : []}
+      />
+    </>
   );
 }

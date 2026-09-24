@@ -1,16 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { Sprout, MoreHorizontal, Calendar } from 'lucide-react';
+import { Sprout, Eye, Calendar } from 'lucide-react';
 import { EntityPageLayout } from '../../components/layout/EntityPageLayout';
 import { batchesApi } from '../../services/api';
 import type { TraceabilityBatch } from '../../types';
 import { Modal } from '../../components/ui/Modal';
+import { DetailModal } from '../../components/ui/DetailModal';
 import { EntityForm, type FieldDef } from '../../components/ui/EntityForm';
+
+const COFFEE_TYPE_LABELS: Record<string, string> = {
+  NATURAL: 'Natural',
+  PULPED_NATURAL: 'Cereja Descascado',
+};
 
 export function Producao() {
   const [data, setData] = useState<TraceabilityBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selected, setSelected] = useState<TraceabilityBatch | null>(null);
 
   const formFields: FieldDef[] = [
     { name: 'batch_code', label: 'Código do Lote', type: 'text', required: true },
@@ -104,8 +111,12 @@ export function Producao() {
             </div>
           </td>
           <td className="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-card group-hover:bg-card-hover transition-colors">
-            <button className="p-1 rounded text-text-muted hover:text-gold transition-colors">
-              <MoreHorizontal size={18} />
+            <button
+              onClick={() => setSelected(batch)}
+              title="Ver detalhes"
+              className="p-1.5 rounded text-text-muted hover:text-gold hover:bg-gold/10 transition-colors"
+            >
+              <Eye size={16} />
             </button>
           </td>
         </tr>
@@ -119,6 +130,21 @@ export function Producao() {
           onCancel={() => setIsModalOpen(false)}
         />
       </Modal>
+
+      <DetailModal
+        isOpen={selected !== null}
+        onClose={() => setSelected(null)}
+        title={selected ? `Lote ${selected.batch_code}` : ''}
+        items={selected ? [
+          { label: 'Código do Lote', value: selected.batch_code },
+          { label: 'Safra', value: selected.harvest_season },
+          { label: 'Tipo de Café', value: COFFEE_TYPE_LABELS[selected.coffee_type] ?? selected.coffee_type },
+          { label: 'Volume', value: `${Number(selected.total_volume_measures).toFixed(1)} medidas` },
+          { label: 'Data da Colheita', value: new Date(selected.harvest_date).toLocaleDateString('pt-BR') },
+          { label: 'ID do Talhão', value: selected.plot_id },
+          { label: 'ID do Lote', value: selected.id },
+        ] : []}
+      />
     </>
   );
 }

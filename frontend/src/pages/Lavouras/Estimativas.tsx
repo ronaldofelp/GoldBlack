@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, MoreHorizontal, Package } from 'lucide-react';
+import { TrendingUp, Eye } from 'lucide-react';
 import { EntityPageLayout } from '../../components/layout/EntityPageLayout';
 import { harvestEstimatesApi } from '../../services/api';
 import type { HarvestEstimate } from '../../types';
 import { Modal } from '../../components/ui/Modal';
+import { DetailModal } from '../../components/ui/DetailModal';
 import { EntityForm, type FieldDef } from '../../components/ui/EntityForm';
 
 export function Estimativas() {
@@ -11,6 +12,7 @@ export function Estimativas() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selected, setSelected] = useState<HarvestEstimate | null>(null);
 
   const formFields: FieldDef[] = [
     { name: 'plot_id', label: 'ID do Talhão', type: 'text', required: true },
@@ -77,8 +79,12 @@ export function Estimativas() {
             {estimate.estimated_yield_per_ha != null ? Number(estimate.estimated_yield_per_ha).toFixed(1) : '-'}
           </td>
           <td className="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-card group-hover:bg-card-hover transition-colors">
-            <button className="p-1 rounded text-text-muted hover:text-gold transition-colors">
-              <MoreHorizontal size={18} />
+            <button
+              onClick={() => setSelected(estimate)}
+              title="Ver detalhes"
+              className="p-1.5 rounded text-text-muted hover:text-gold hover:bg-gold/10 transition-colors"
+            >
+              <Eye size={16} />
             </button>
           </td>
         </tr>
@@ -92,6 +98,19 @@ export function Estimativas() {
           onCancel={() => setIsModalOpen(false)}
         />
       </Modal>
+
+      <DetailModal
+        isOpen={selected !== null}
+        onClose={() => setSelected(null)}
+        title="Detalhes da Estimativa"
+        items={selected ? [
+          { label: 'Safra', value: selected.season },
+          { label: 'ID do Talhão', value: selected.plot_id },
+          { label: 'Sacas Estimadas', value: selected.estimated_sacks != null ? `${Number(selected.estimated_sacks).toFixed(1)} sc` : null },
+          { label: 'Produtividade', value: selected.estimated_yield_per_ha != null ? `${Number(selected.estimated_yield_per_ha).toFixed(1)} sc/ha` : null },
+          { label: 'ID da Estimativa', value: selected.id },
+        ] : []}
+      />
     </>
   );
 }
