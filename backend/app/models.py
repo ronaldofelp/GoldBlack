@@ -335,9 +335,8 @@ class AgriculturalActivity(Base):
 
 class ActivitySupply(Base):
     __tablename__ = "activity_supplies"
-    __table_args__ = (
-        UniqueConstraint("activity_id", "supply_id", name="uq_activity_supply"),
-    )
+    # Sem UniqueConstraint redundante: a PRIMARY KEY composta (activity_id, supply_id)
+    # já garante unicidade. Oracle ORA-02261 rejeita constraint duplicada.
 
     activity_id: Mapped[str] = mapped_column(String(36), ForeignKey("agricultural_activities.id"), primary_key=True)
     supply_id: Mapped[str] = mapped_column(String(36), ForeignKey("agricultural_supplies.id"), primary_key=True)

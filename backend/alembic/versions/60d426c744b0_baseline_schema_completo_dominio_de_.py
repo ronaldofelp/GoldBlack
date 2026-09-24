@@ -289,7 +289,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['activity_id'], ['agricultural_activities.id'], ),
     sa.ForeignKeyConstraint(['supply_id'], ['agricultural_supplies.id'], ),
     sa.PrimaryKeyConstraint('activity_id', 'supply_id'),
-    sa.UniqueConstraint('activity_id', 'supply_id', name='uq_activity_supply')
+    # UniqueConstraint removida: PK composta já garante unicidade; Oracle ORA-02261
+    # rejeita constraint duplicada sobre as mesmas colunas.
     )
     op.create_table('labor_entries',
     sa.Column('id', sa.String(length=36), nullable=False),
