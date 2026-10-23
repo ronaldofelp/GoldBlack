@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, date
+from typing import Optional
 from sqlalchemy import (
     String, Integer, Numeric, Boolean, Text, Date, DateTime,
     ForeignKey, Enum as SAEnum, UniqueConstraint, Index
@@ -556,4 +557,16 @@ class TrackingEvent(Base):
     recorded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     tracking: Mapped["CoffeeTracking"] = relationship("CoffeeTracking", back_populates="events")
+
+
+class SystemSettings(Base):
+    """Configurações do sistema por fazenda (singleton — uma linha por fazenda)."""
+    __tablename__ = "system_settings"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    farm_id: Mapped[str] = mapped_column(String(36), ForeignKey("farms.id"), unique=True, nullable=False)
+    active_season_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("seasons.id"), nullable=True)
+
+    farm: Mapped["Farm"] = relationship("Farm")
+    active_season: Mapped[Optional["Season"]] = relationship("Season")
 

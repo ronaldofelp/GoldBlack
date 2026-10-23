@@ -699,3 +699,19 @@ class PlotSeasonCost(OrmBase):
     gross_profit: Decimal                       # receita − custo
     activities: list[ActivityCostBreakdown] = []
 
+
+# ── Configurações do sistema ──────────────────────────────────────────────────
+
+class SystemSettingsResponse(OrmBase):
+    farm_id: str
+    farm_name: str
+    farm_total_area_ha: Decimal
+    active_season_id: Optional[str]
+    active_season_name: Optional[str]
+
+
+class SystemSettingsUpdate(OrmBase):
+    active_season_id: Optional[str] = None
+    farm_name: Optional[str] = Field(default=None, min_length=2, max_length=255)
+    farm_total_area_ha: Optional[Decimal] = Field(default=None, gt=0)
+

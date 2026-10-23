@@ -38,6 +38,7 @@ from .repositories import (
     SQLAlchemyWorkerRepository, SQLAlchemyServiceDefinitionRepository,
     SQLAlchemyMachineUsageRepository, SQLAlchemyLaborEntryRepository,
     SQLAlchemyActivitySupplyRepository,
+    ISystemSettingsRepository, SQLAlchemySystemSettingsRepository,
 )
 
 
@@ -157,3 +158,7 @@ def get_labor_entry_repo(db: Session = Depends(get_db)) -> SQLAlchemyLaborEntryR
 
 def get_activity_supply_repo(db: Session = Depends(get_db)) -> SQLAlchemyActivitySupplyRepository:
     return SQLAlchemyActivitySupplyRepository(db)
+
+
+def get_system_settings_repo(db: Session = Depends(get_db)) -> ISystemSettingsRepository:
+    return SQLAlchemySystemSettingsRepository(db)

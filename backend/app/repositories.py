@@ -868,3 +868,40 @@ class SQLAlchemyActivitySupplyRepository:
         self.db.commit()
         return True
 
+
+# ── Configurações do sistema ──────────────────────────────────────────────────
+
+class ISystemSettingsRepository(ABC):
+    @abstractmethod
+    def get_by_farm(self, farm_id: str) -> Optional[models.SystemSettings]:
+        ...
+
+    @abstractmethod
+    def upsert(self, farm_id: str, active_season_id: Optional[str]) -> models.SystemSettings:
+        ...
+
+
+class SQLAlchemySystemSettingsRepository(ISystemSettingsRepository):
+    def __init__(self, db: Session):
+        self.db = db
+
+    def get_by_farm(self, farm_id: str) -> Optional[models.SystemSettings]:
+        return (
+            self.db.query(models.SystemSettings)
+            .filter(models.SystemSettings.farm_id == farm_id)
+            .first()
+        )
+
+    def upsert(self, farm_id: str, active_season_id: Optional[str]) -> models.SystemSettings:
+        existing = self.get_by_farm(farm_id)
+        if existing:
+            existing.active_season_id = active_season_id
+            self.db.commit()
+            self.db.refresh(existing)
+            return existing
+        new_settings = models.SystemSettings(farm_id=farm_id, active_season_id=active_season_id)
+        self.db.add(new_settings)
+        self.db.commit()
+        self.db.refresh(new_settings)
+        return new_settings
+

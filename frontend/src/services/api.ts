@@ -7,6 +7,7 @@ import type {
   ActivitySupply, MachineUsage, LaborEntry,
   ActivityCostBreakdown, PlotSeasonCost,
   LoginResponse, AuthUser, User, UserRole,
+  SystemSettings, SystemSettingsUpdate,
 } from '../types';
 
 export const TOKEN_KEY = '@GoldBlack:token';
@@ -278,4 +279,9 @@ export const costApi = {
     api.get<ActivityCostBreakdown>(`/activities/${activityId}/cost`),
   plotSeasonCost: (plotId: string, seasonId: string) =>
     api.get<PlotSeasonCost>(`/plots/${plotId}/seasons/${seasonId}/cost`),
+};
+
+export const settingsApi = {
+  get: () => api.get<SystemSettings>('/settings'),
+  update: (data: SystemSettingsUpdate) => api.put<SystemSettings>('/settings', data),
 };

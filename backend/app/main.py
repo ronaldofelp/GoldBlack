@@ -24,6 +24,7 @@ from .dependencies import (
     get_processing_phase_repo,
     get_sale_repo, get_financial_transaction_repo,
     get_coffee_tracking_repo, get_tracking_event_repo,
+    get_system_settings_repo,
 )
 from .repositories import (
     IUserRepository, IFarmRepository, IPlotRepository,
@@ -34,6 +35,7 @@ from .repositories import (
     ISaleRepository, IFinancialTransactionRepository,
     ICoffeeTrackingRepository, ITrackingEventRepository,
 )
+from .repositories import ISystemSettingsRepository
 from passlib.context import CryptContext
 
 from .database import SessionLocal, engine, get_db
@@ -359,6 +361,61 @@ def update_farm(
 def delete_farm(farm_id: str, repo: Annotated[IFarmRepository, Depends(get_farm_repo)]):
     if not repo.delete(farm_id):
         _404("Propriedade", farm_id)
+
+
+# ── Configurações do sistema ──────────────────────────────────────────────────
+
+@app.get("/settings", response_model=schemas.SystemSettingsResponse, tags=["Configurações"])
+def get_settings(
+    user: Annotated[models.User, Depends(get_current_user)],
+    farm_repo: Annotated[IFarmRepository, Depends(get_farm_repo)],
+    settings_repo: Annotated[ISystemSettingsRepository, Depends(get_system_settings_repo)],
+):
+    """Retorna as configurações da fazenda do usuário autenticado."""
+    farms = farm_repo.list_by_producer(user.id)
+    if not farms:
+        raise HTTPException(status_code=404, detail="Nenhuma fazenda cadastrada para este usuário.")
+    farm = farms[0]
+    settings = settings_repo.get_by_farm(farm.id)
+    active_season_name = None
+    if settings and settings.active_season:
+        active_season_name = settings.active_season.name
+    return schemas.SystemSettingsResponse(
+        farm_id=farm.id,
+        farm_name=farm.name,
+        farm_total_area_ha=farm.total_area_ha,
+        active_season_id=settings.active_season_id if settings else None,
+        active_season_name=active_season_name,
+    )
+
+
+@app.put("/settings", response_model=schemas.SystemSettingsResponse, tags=["Configurações"])
+def update_settings(
+    payload: schemas.SystemSettingsUpdate,
+    user: Annotated[models.User, Depends(get_current_user)],
+    farm_repo: Annotated[IFarmRepository, Depends(get_farm_repo)],
+    settings_repo: Annotated[ISystemSettingsRepository, Depends(get_system_settings_repo)],
+):
+    """Atualiza as configurações do sistema: safra ativa e/ou dados básicos da fazenda."""
+    farms = farm_repo.list_by_producer(user.id)
+    if not farms:
+        raise HTTPException(status_code=404, detail="Nenhuma fazenda cadastrada para este usuário.")
+    farm = farms[0]
+    if payload.farm_name or payload.farm_total_area_ha:
+        farm.name = payload.farm_name or farm.name
+        farm.total_area_ha = payload.farm_total_area_ha or farm.total_area_ha
+        farm_repo.update(farm)
+    settings = settings_repo.upsert(farm.id, payload.active_season_id)
+    active_season_name = None
+    if settings.active_season:
+        active_season_name = settings.active_season.name
+    return schemas.SystemSettingsResponse(
+        farm_id=farm.id,
+        farm_name=farm.name,
+        farm_total_area_ha=farm.total_area_ha,
+        active_season_id=settings.active_season_id,
+        active_season_name=active_season_name,
+    )
 
 
 @app.post("/plots", response_model=schemas.PlotResponse, status_code=201, tags=["Talhões"])

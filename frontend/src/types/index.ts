@@ -271,6 +271,20 @@ export interface Season {
   end_date: string | null;
 }
 
+export interface SystemSettings {
+  farm_id: string;
+  farm_name: string;
+  farm_total_area_ha: number;
+  active_season_id: string | null;
+  active_season_name: string | null;
+}
+
+export interface SystemSettingsUpdate {
+  active_season_id?: string | null;
+  farm_name?: string;
+  farm_total_area_ha?: number;
+}
+
 export interface AuthUser {
   id: string;
   name: string;
