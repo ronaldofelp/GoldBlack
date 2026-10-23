@@ -5,6 +5,7 @@ from typing import Generic, TypeVar, Optional
 from sqlalchemy.orm import Session
 
 from . import models
+from .database import engine
 
 T = TypeVar("T")
 
@@ -671,9 +672,15 @@ class SQLAlchemyCoffeeTrackingRepository(ICoffeeTrackingRepository):
         from datetime import datetime as _dt
         year = _dt.utcnow().year
         prefix = f"GB-{year}-"
-        last = self.db.query(models.CoffeeTracking).filter(
-            models.CoffeeTracking.tracking_code.like(f"{prefix}%")
-        ).order_by(models.CoffeeTracking.tracking_code.desc()).first()
+        q = (
+            self.db.query(models.CoffeeTracking)
+            .filter(models.CoffeeTracking.tracking_code.like(f"{prefix}%"))
+            .order_by(models.CoffeeTracking.tracking_code.desc())
+        )
+        # SELECT FOR UPDATE evita corrida em producao (Oracle); SQLite nao suporta
+        if engine.dialect.name != "sqlite":
+            q = q.with_for_update()
+        last = q.first()
         if last:
             seq = int(last.tracking_code.split("-")[-1]) + 1
         else:

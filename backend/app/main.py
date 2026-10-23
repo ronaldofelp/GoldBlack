@@ -9,6 +9,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from jose import jwt, JWTError
+from sqlalchemy.orm import Session
 
 from .database import engine
 from . import models, schemas
@@ -35,7 +36,7 @@ from .repositories import (
 )
 from passlib.context import CryptContext
 
-from .database import SessionLocal, engine
+from .database import SessionLocal, engine, get_db
 
 _DEV_JWT_SECRET = "dev-secret-troque-em-producao-goldblack"
 _DEV_ENVS = {"development", "dev", "test", "testing", "local"}
@@ -1098,8 +1099,8 @@ def health_check():
 @app.post("/trackings", response_model=schemas.CoffeeTrackingResponse, status_code=201, tags=["Rastreio do Café"])
 def create_tracking(
     payload: schemas.CoffeeTrackingCreate,
+    db: Annotated[Session, Depends(get_db)],
     repo: Annotated[ICoffeeTrackingRepository, Depends(get_coffee_tracking_repo)],
-    event_repo: Annotated[ITrackingEventRepository, Depends(get_tracking_event_repo)],
 ):
     """Cria um novo rastreio. Gera automaticamente um código único (GB-ANO-XXXX)."""
     tracking_code = repo.next_tracking_code()
@@ -1111,17 +1112,17 @@ def create_tracking(
         current_stage=models.TrackingStage.COLHEITA,
         status=models.TrackingStatus.IN_PROGRESS,
     )
-    created = repo.create(obj)
-    # Registra o evento inicial de colheita
     initial_event = models.TrackingEvent(
         id=str(uuid.uuid4()),
-        tracking_id=created.id,
+        tracking_id=obj.id,
         stage=models.TrackingStage.COLHEITA,
         notes="Rastreio criado — etapa inicial: Colheita",
     )
-    event_repo.create(initial_event)
-    # Refresh para incluir o evento na resposta
-    return repo.get_by_id(created.id)
+    db.add(obj)
+    db.add(initial_event)
+    db.commit()
+    db.refresh(obj)
+    return repo.get_by_id(obj.id)
 
 
 @app.get("/trackings", response_model=list[schemas.CoffeeTrackingListResponse], tags=["Rastreio do Café"])
@@ -1194,6 +1195,7 @@ def create_tracking_event(
     tracking_id: str,
     payload: schemas.TrackingEventCreate,
     request: Request,
+    db: Annotated[Session, Depends(get_db)],
     tracking_repo: Annotated[ICoffeeTrackingRepository, Depends(get_coffee_tracking_repo)],
     event_repo: Annotated[ITrackingEventRepository, Depends(get_tracking_event_repo)],
     user_repo: Annotated[IUserRepository, Depends(get_user_repo)],
@@ -1246,17 +1248,16 @@ def create_tracking_event(
         notes=payload.notes,
         recorded_by=recorded_by,
     )
-    created_event = event_repo.create(event)
-
-    # Atualiza a etapa atual do rastreio
+    # Atualiza stage e persiste evento + tracking em uma única transação
     tracking.current_stage = payload.stage
     tracking.updated_at = datetime.utcnow()
     if payload.stage == models.TrackingStage.FINALIZADO:
         tracking.status = models.TrackingStatus.COMPLETED
         tracking.completed_at = datetime.utcnow()
-    tracking_repo.update(tracking)
-
-    return created_event
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return event
 
 
 @app.get("/trackings/{tracking_id}/events", response_model=list[schemas.TrackingEventResponse], tags=["Rastreio do Café"])
