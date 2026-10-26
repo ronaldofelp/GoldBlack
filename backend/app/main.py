@@ -24,7 +24,7 @@ from .dependencies import (
     get_processing_phase_repo,
     get_sale_repo, get_financial_transaction_repo,
     get_coffee_tracking_repo, get_tracking_event_repo,
-    get_system_settings_repo,
+    get_system_settings_repo, get_purchase_repo,
 )
 from .repositories import (
     IUserRepository, IFarmRepository, IPlotRepository,
@@ -35,7 +35,7 @@ from .repositories import (
     ISaleRepository, IFinancialTransactionRepository,
     ICoffeeTrackingRepository, ITrackingEventRepository,
 )
-from .repositories import ISystemSettingsRepository
+from .repositories import ISystemSettingsRepository, IPurchaseRepository
 from passlib.context import CryptContext
 
 from .database import SessionLocal, engine, get_db
@@ -1359,4 +1359,128 @@ def get_tracking_qrcode(
         media_type="image/png",
         headers={"Content-Disposition": f'inline; filename="qrcode-{tracking.tracking_code}.png"'},
     )
+
+
+# ── Módulo de Compras ─────────────────────────────────────────────────────────
+
+@app.get("/purchases", response_model=list[schemas.PurchaseResponse], tags=["Compras"])
+def list_purchases(
+    farm_id: Optional[str] = Query(None),
+    user: Annotated[models.User, Depends(get_current_user)] = None,
+    farm_repo: Annotated[IFarmRepository, Depends(get_farm_repo)] = None,
+    repo: Annotated[IPurchaseRepository, Depends(get_purchase_repo)] = None,
+):
+    if farm_id:
+        return repo.list_by_farm(farm_id)
+    farms = farm_repo.list_by_producer(user.id)
+    if not farms:
+        return []
+    return repo.list_by_farm(farms[0].id)
+
+
+@app.post("/purchases", response_model=schemas.PurchaseResponse, status_code=201, tags=["Compras"])
+def create_purchase(
+    payload: schemas.PurchaseCreate,
+    db: Annotated[Session, Depends(get_db)],
+    repo: Annotated[IPurchaseRepository, Depends(get_purchase_repo)],
+):
+    purchase = models.Purchase(
+        id=str(uuid.uuid4()),
+        farm_id=payload.farm_id,
+        supplier=payload.supplier,
+        invoice_number=payload.invoice_number,
+        purchase_date=payload.purchase_date,
+        total_value=payload.total_value,
+        notes=payload.notes,
+    )
+    db.add(purchase)
+    for item_data in payload.items:
+        item = models.PurchaseItem(
+            id=str(uuid.uuid4()),
+            purchase_id=purchase.id,
+            supply_id=item_data.supply_id,
+            quantity=item_data.quantity,
+            unit_price=item_data.unit_price,
+        )
+        db.add(item)
+    db.commit()
+    db.refresh(purchase)
+    return repo.get_by_id(purchase.id)
+
+
+@app.get("/purchases/{purchase_id}", response_model=schemas.PurchaseResponse, tags=["Compras"])
+def get_purchase(
+    purchase_id: str,
+    repo: Annotated[IPurchaseRepository, Depends(get_purchase_repo)],
+):
+    obj = repo.get_by_id(purchase_id)
+    if not obj:
+        _404("Compra", purchase_id)
+    return obj
+
+
+@app.put("/purchases/{purchase_id}", response_model=schemas.PurchaseResponse, tags=["Compras"])
+def update_purchase(
+    purchase_id: str,
+    payload: schemas.PurchaseUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    repo: Annotated[IPurchaseRepository, Depends(get_purchase_repo)],
+):
+    purchase = repo.get_by_id(purchase_id)
+    if not purchase:
+        _404("Compra", purchase_id)
+
+    was_delivered = purchase.status == models.PurchaseStatus.DELIVERED
+    for field, value in payload.model_dump(exclude_none=True).items():
+        setattr(purchase, field, value)
+
+    # Ao marcar como DELIVERED pela primeira vez, dá baixa no estoque de cada item
+    if payload.status == models.PurchaseStatus.DELIVERED and not was_delivered:
+        for item in purchase.items:
+            supply = db.get(models.AgriculturalSupply, item.supply_id)
+            if supply:
+                supply.stock_quantity = float(supply.stock_quantity) + float(item.quantity)
+
+    db.commit()
+    db.refresh(purchase)
+    return purchase
+
+
+@app.delete("/purchases/{purchase_id}", status_code=204, tags=["Compras"])
+def delete_purchase(
+    purchase_id: str,
+    repo: Annotated[IPurchaseRepository, Depends(get_purchase_repo)],
+):
+    if not repo.delete(purchase_id):
+        _404("Compra", purchase_id)
+
+
+@app.post("/purchases/{purchase_id}/items", response_model=schemas.PurchaseItemResponse, status_code=201, tags=["Compras"])
+def add_purchase_item(
+    purchase_id: str,
+    payload: schemas.PurchaseItemCreate,
+    repo: Annotated[IPurchaseRepository, Depends(get_purchase_repo)],
+):
+    if not repo.get_by_id(purchase_id):
+        _404("Compra", purchase_id)
+    item = models.PurchaseItem(
+        id=str(uuid.uuid4()),
+        purchase_id=purchase_id,
+        supply_id=payload.supply_id,
+        quantity=payload.quantity,
+        unit_price=payload.unit_price,
+    )
+    return repo.add_item(item)
+
+
+@app.delete("/purchases/{purchase_id}/items/{item_id}", status_code=204, tags=["Compras"])
+def remove_purchase_item(
+    purchase_id: str,
+    item_id: str,
+    repo: Annotated[IPurchaseRepository, Depends(get_purchase_repo)],
+):
+    item = repo.get_item(item_id)
+    if not item or item.purchase_id != purchase_id:
+        raise HTTPException(status_code=404, detail=f"Item {item_id} não encontrado na compra {purchase_id}.")
+    repo.remove_item(item_id)
 

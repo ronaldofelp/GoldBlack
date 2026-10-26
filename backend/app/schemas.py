@@ -11,6 +11,7 @@ from .models import (
     TransactionType, TransactionCategory, TransactionStatus, AlertType,
     TrackingStatus, TrackingStage,
     WorkerType, LaborType,
+    PurchaseStatus,
 )
 
 
@@ -714,4 +715,52 @@ class SystemSettingsUpdate(OrmBase):
     active_season_id: Optional[str] = None
     farm_name: Optional[str] = Field(default=None, min_length=2, max_length=255)
     farm_total_area_ha: Optional[Decimal] = Field(default=None, gt=0)
+
+
+# ── Módulo de Compras ─────────────────────────────────────────────────────────
+
+class PurchaseItemCreate(OrmBase):
+    supply_id: str
+    quantity: Decimal = Field(..., gt=0)
+    unit_price: Decimal = Field(..., ge=0)
+
+
+class PurchaseItemResponse(OrmBase):
+    id: str
+    purchase_id: str
+    supply_id: str
+    quantity: Decimal
+    unit_price: Decimal
+
+
+class PurchaseCreate(OrmBase):
+    farm_id: str
+    supplier: str = Field(..., min_length=2, max_length=255)
+    invoice_number: Optional[str] = Field(default=None, max_length=100)
+    purchase_date: date
+    total_value: Decimal = Field(..., ge=0)
+    notes: Optional[str] = None
+    items: list[PurchaseItemCreate] = []
+
+
+class PurchaseUpdate(OrmBase):
+    supplier: Optional[str] = Field(default=None, min_length=2, max_length=255)
+    invoice_number: Optional[str] = Field(default=None, max_length=100)
+    purchase_date: Optional[date] = None
+    total_value: Optional[Decimal] = Field(default=None, ge=0)
+    status: Optional[PurchaseStatus] = None
+    notes: Optional[str] = None
+
+
+class PurchaseResponse(OrmBase):
+    id: str
+    farm_id: str
+    supplier: str
+    invoice_number: Optional[str]
+    purchase_date: date
+    total_value: Decimal
+    status: PurchaseStatus
+    notes: Optional[str]
+    created_at: datetime
+    items: list[PurchaseItemResponse] = []
 

@@ -905,3 +905,91 @@ class SQLAlchemySystemSettingsRepository(ISystemSettingsRepository):
         self.db.refresh(new_settings)
         return new_settings
 
+
+# ── Módulo de Compras ─────────────────────────────────────────────────────────
+
+class IPurchaseRepository(ABC):
+    @abstractmethod
+    def get_by_id(self, purchase_id: str) -> Optional[models.Purchase]:
+        ...
+
+    @abstractmethod
+    def list_by_farm(self, farm_id: str) -> list[models.Purchase]:
+        ...
+
+    @abstractmethod
+    def create(self, entity: models.Purchase) -> models.Purchase:
+        ...
+
+    @abstractmethod
+    def update(self, entity: models.Purchase) -> models.Purchase:
+        ...
+
+    @abstractmethod
+    def delete(self, purchase_id: str) -> bool:
+        ...
+
+    @abstractmethod
+    def get_item(self, item_id: str) -> Optional[models.PurchaseItem]:
+        ...
+
+    @abstractmethod
+    def add_item(self, entity: models.PurchaseItem) -> models.PurchaseItem:
+        ...
+
+    @abstractmethod
+    def remove_item(self, item_id: str) -> bool:
+        ...
+
+
+class SQLAlchemyPurchaseRepository(IPurchaseRepository):
+    def __init__(self, db: Session):
+        self.db = db
+
+    def get_by_id(self, purchase_id: str) -> Optional[models.Purchase]:
+        return self.db.get(models.Purchase, purchase_id)
+
+    def list_by_farm(self, farm_id: str) -> list[models.Purchase]:
+        return (
+            self.db.query(models.Purchase)
+            .filter(models.Purchase.farm_id == farm_id)
+            .order_by(models.Purchase.purchase_date.desc())
+            .all()
+        )
+
+    def create(self, entity: models.Purchase) -> models.Purchase:
+        self.db.add(entity)
+        self.db.commit()
+        self.db.refresh(entity)
+        return entity
+
+    def update(self, entity: models.Purchase) -> models.Purchase:
+        self.db.commit()
+        self.db.refresh(entity)
+        return entity
+
+    def delete(self, purchase_id: str) -> bool:
+        obj = self.get_by_id(purchase_id)
+        if not obj:
+            return False
+        self.db.delete(obj)
+        self.db.commit()
+        return True
+
+    def get_item(self, item_id: str) -> Optional[models.PurchaseItem]:
+        return self.db.get(models.PurchaseItem, item_id)
+
+    def add_item(self, entity: models.PurchaseItem) -> models.PurchaseItem:
+        self.db.add(entity)
+        self.db.commit()
+        self.db.refresh(entity)
+        return entity
+
+    def remove_item(self, item_id: str) -> bool:
+        obj = self.get_item(item_id)
+        if not obj:
+            return False
+        self.db.delete(obj)
+        self.db.commit()
+        return True
+

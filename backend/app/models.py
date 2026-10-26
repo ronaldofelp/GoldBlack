@@ -113,6 +113,7 @@ class Farm(Base):
     weather_logs: Mapped[list["WeatherLog"]] = relationship("WeatherLog", back_populates="farm", cascade="all, delete-orphan")
     system_alerts: Mapped[list["SystemAlert"]] = relationship("SystemAlert", back_populates="farm")
     financial_transactions: Mapped[list["FinancialTransaction"]] = relationship("FinancialTransaction", back_populates="farm", cascade="all, delete-orphan")
+    purchases: Mapped[list["Purchase"]] = relationship("Purchase", back_populates="farm", cascade="all, delete-orphan")
 
 
 class Plot(Base):
@@ -557,6 +558,44 @@ class TrackingEvent(Base):
     recorded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     tracking: Mapped["CoffeeTracking"] = relationship("CoffeeTracking", back_populates="events")
+
+
+class PurchaseStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    DELIVERED = "DELIVERED"
+    CANCELLED = "CANCELLED"
+
+
+class Purchase(Base):
+    """Ordem de compra de insumos (fertilizante, defensivo, etc.) para a fazenda."""
+    __tablename__ = "purchases"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    farm_id: Mapped[str] = mapped_column(String(36), ForeignKey("farms.id"), nullable=False, index=True)
+    supplier: Mapped[str] = mapped_column(String(255), nullable=False)
+    invoice_number: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    purchase_date: Mapped[date] = mapped_column(Date, nullable=False)
+    total_value: Mapped[float] = mapped_column(Numeric(15, 2), nullable=False)
+    status: Mapped[PurchaseStatus] = mapped_column(SAEnum(PurchaseStatus), nullable=False, default=PurchaseStatus.PENDING)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    farm: Mapped["Farm"] = relationship("Farm", back_populates="purchases")
+    items: Mapped[list["PurchaseItem"]] = relationship("PurchaseItem", back_populates="purchase", cascade="all, delete-orphan")
+
+
+class PurchaseItem(Base):
+    """Item de uma ordem de compra: insumo + quantidade + preço unitário."""
+    __tablename__ = "purchase_items"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    purchase_id: Mapped[str] = mapped_column(String(36), ForeignKey("purchases.id"), nullable=False, index=True)
+    supply_id: Mapped[str] = mapped_column(String(36), ForeignKey("agricultural_supplies.id"), nullable=False)
+    quantity: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    unit_price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+
+    purchase: Mapped["Purchase"] = relationship("Purchase", back_populates="items")
+    supply: Mapped["AgriculturalSupply"] = relationship("AgriculturalSupply")
 
 
 class SystemSettings(Base):

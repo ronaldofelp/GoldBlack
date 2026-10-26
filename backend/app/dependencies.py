@@ -39,6 +39,7 @@ from .repositories import (
     SQLAlchemyMachineUsageRepository, SQLAlchemyLaborEntryRepository,
     SQLAlchemyActivitySupplyRepository,
     ISystemSettingsRepository, SQLAlchemySystemSettingsRepository,
+    IPurchaseRepository, SQLAlchemyPurchaseRepository,
 )
 
 
@@ -162,3 +163,7 @@ def get_activity_supply_repo(db: Session = Depends(get_db)) -> SQLAlchemyActivit
 
 def get_system_settings_repo(db: Session = Depends(get_db)) -> ISystemSettingsRepository:
     return SQLAlchemySystemSettingsRepository(db)
+
+
+def get_purchase_repo(db: Session = Depends(get_db)) -> IPurchaseRepository:
+    return SQLAlchemyPurchaseRepository(db)
