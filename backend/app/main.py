@@ -1363,6 +1363,22 @@ def get_tracking_qrcode(
 
 # ── Módulo de Compras ─────────────────────────────────────────────────────────
 
+def _get_user_farm(user: models.User, farm_repo: IFarmRepository) -> models.Farm:
+    """Retorna a fazenda do usuário autenticado. 403 se não for o dono."""
+    farms = farm_repo.list_by_producer(user.id)
+    if not farms:
+        raise HTTPException(status_code=404, detail="Nenhuma fazenda cadastrada para este usuário.")
+    return farms[0]
+
+
+def _assert_purchase_owner(purchase: models.Purchase, user: models.User) -> None:
+    """403 se o usuário não for dono da fazenda da compra (ADMIN passa direto)."""
+    if user.role == models.UserRole.ADMIN:
+        return
+    if purchase.farm.producer_id != user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado: compra pertence a outra fazenda.")
+
+
 @app.get("/purchases", response_model=list[schemas.PurchaseResponse], tags=["Compras"])
 def list_purchases(
     farm_id: Optional[str] = Query(None),
@@ -1371,6 +1387,11 @@ def list_purchases(
     repo: Annotated[IPurchaseRepository, Depends(get_purchase_repo)] = None,
 ):
     if farm_id:
+        # Verifica que o usuário é dono desta fazenda (ADMIN passa)
+        if user.role != models.UserRole.ADMIN:
+            farm = farm_repo.get_by_id(farm_id)
+            if not farm or farm.producer_id != user.id:
+                raise HTTPException(status_code=403, detail="Acesso negado: fazenda não pertence ao usuário.")
         return repo.list_by_farm(farm_id)
     farms = farm_repo.list_by_producer(user.id)
     if not farms:
@@ -1382,8 +1403,15 @@ def list_purchases(
 def create_purchase(
     payload: schemas.PurchaseCreate,
     db: Annotated[Session, Depends(get_db)],
+    user: Annotated[models.User, Depends(get_current_user)],
+    farm_repo: Annotated[IFarmRepository, Depends(get_farm_repo)],
     repo: Annotated[IPurchaseRepository, Depends(get_purchase_repo)],
 ):
+    # Verifica que farm_id pertence ao usuário (ADMIN pode criar em qualquer fazenda)
+    if user.role != models.UserRole.ADMIN:
+        farm = farm_repo.get_by_id(payload.farm_id)
+        if not farm or farm.producer_id != user.id:
+            raise HTTPException(status_code=403, detail="Acesso negado: fazenda não pertence ao usuário.")
     purchase = models.Purchase(
         id=str(uuid.uuid4()),
         farm_id=payload.farm_id,
@@ -1411,11 +1439,13 @@ def create_purchase(
 @app.get("/purchases/{purchase_id}", response_model=schemas.PurchaseResponse, tags=["Compras"])
 def get_purchase(
     purchase_id: str,
+    user: Annotated[models.User, Depends(get_current_user)],
     repo: Annotated[IPurchaseRepository, Depends(get_purchase_repo)],
 ):
     obj = repo.get_by_id(purchase_id)
     if not obj:
         _404("Compra", purchase_id)
+    _assert_purchase_owner(obj, user)
     return obj
 
 
@@ -1424,18 +1454,25 @@ def update_purchase(
     purchase_id: str,
     payload: schemas.PurchaseUpdate,
     db: Annotated[Session, Depends(get_db)],
+    user: Annotated[models.User, Depends(get_current_user)],
     repo: Annotated[IPurchaseRepository, Depends(get_purchase_repo)],
 ):
     purchase = repo.get_by_id(purchase_id)
     if not purchase:
         _404("Compra", purchase_id)
+    _assert_purchase_owner(purchase, user)
 
-    was_delivered = purchase.status == models.PurchaseStatus.DELIVERED
+    # Rejeita transições ilegais
+    if payload.status == models.PurchaseStatus.DELIVERED and purchase.status == models.PurchaseStatus.CANCELLED:
+        raise HTTPException(status_code=409, detail="Não é possível marcar uma compra cancelada como entregue.")
+
+    # Captura estado ANTES de aplicar as mudanças
+    was_pending = purchase.status == models.PurchaseStatus.PENDING
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(purchase, field, value)
 
-    # Ao marcar como DELIVERED pela primeira vez, dá baixa no estoque de cada item
-    if payload.status == models.PurchaseStatus.DELIVERED and not was_delivered:
+    # Baixa de estoque APENAS na transição PENDING → DELIVERED
+    if payload.status == models.PurchaseStatus.DELIVERED and was_pending:
         for item in purchase.items:
             supply = db.get(models.AgriculturalSupply, item.supply_id)
             if supply:
@@ -1449,20 +1486,27 @@ def update_purchase(
 @app.delete("/purchases/{purchase_id}", status_code=204, tags=["Compras"])
 def delete_purchase(
     purchase_id: str,
+    user: Annotated[models.User, Depends(get_current_user)],
     repo: Annotated[IPurchaseRepository, Depends(get_purchase_repo)],
 ):
-    if not repo.delete(purchase_id):
+    purchase = repo.get_by_id(purchase_id)
+    if not purchase:
         _404("Compra", purchase_id)
+    _assert_purchase_owner(purchase, user)
+    repo.delete(purchase_id)
 
 
 @app.post("/purchases/{purchase_id}/items", response_model=schemas.PurchaseItemResponse, status_code=201, tags=["Compras"])
 def add_purchase_item(
     purchase_id: str,
     payload: schemas.PurchaseItemCreate,
+    user: Annotated[models.User, Depends(get_current_user)],
     repo: Annotated[IPurchaseRepository, Depends(get_purchase_repo)],
 ):
-    if not repo.get_by_id(purchase_id):
+    purchase = repo.get_by_id(purchase_id)
+    if not purchase:
         _404("Compra", purchase_id)
+    _assert_purchase_owner(purchase, user)
     item = models.PurchaseItem(
         id=str(uuid.uuid4()),
         purchase_id=purchase_id,
@@ -1477,8 +1521,13 @@ def add_purchase_item(
 def remove_purchase_item(
     purchase_id: str,
     item_id: str,
+    user: Annotated[models.User, Depends(get_current_user)],
     repo: Annotated[IPurchaseRepository, Depends(get_purchase_repo)],
 ):
+    purchase = repo.get_by_id(purchase_id)
+    if not purchase:
+        _404("Compra", purchase_id)
+    _assert_purchase_owner(purchase, user)
     item = repo.get_item(item_id)
     if not item or item.purchase_id != purchase_id:
         raise HTTPException(status_code=404, detail=f"Item {item_id} não encontrado na compra {purchase_id}.")
