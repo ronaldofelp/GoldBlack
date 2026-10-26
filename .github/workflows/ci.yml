@@ -102,6 +102,9 @@ jobs:
 
             cd ~/goldblack
 
+            # Atualiza configs (Caddyfile, compose, etc.) antes de recriar containers
+            git pull origin main
+
             # Baixa as imagens novas e recria os containers afetados
             sudo docker compose -f docker-compose.prod.yml --env-file .env.prod pull
             sudo docker compose -f docker-compose.prod.yml --env-file .env.prod \
