@@ -8,6 +8,7 @@ import type {
   ActivityCostBreakdown, PlotSeasonCost,
   LoginResponse, AuthUser, User, UserRole,
   SystemSettings, SystemSettingsUpdate,
+  Purchase, PurchaseCreate, PurchaseUpdate,
 } from '../types';
 
 export const TOKEN_KEY = '@GoldBlack:token';
@@ -284,4 +285,17 @@ export const costApi = {
 export const settingsApi = {
   get: () => api.get<SystemSettings>('/settings'),
   update: (data: SystemSettingsUpdate) => api.put<SystemSettings>('/settings', data),
+};
+
+export const purchasesApi = {
+  list: (farmId?: string) =>
+    api.get<Purchase[]>('/purchases', { params: farmId ? { farm_id: farmId } : {} }),
+  getById: (id: string) => api.get<Purchase>(`/purchases/${id}`),
+  create: (data: PurchaseCreate) => api.post<Purchase>('/purchases', data),
+  update: (id: string, data: PurchaseUpdate) => api.put<Purchase>(`/purchases/${id}`, data),
+  delete: (id: string) => api.delete(`/purchases/${id}`),
+  addItem: (purchaseId: string, data: { supply_id: string; quantity: number; unit_price: number }) =>
+    api.post(`/purchases/${purchaseId}/items`, data),
+  removeItem: (purchaseId: string, itemId: string) =>
+    api.delete(`/purchases/${purchaseId}/items/${itemId}`),
 };

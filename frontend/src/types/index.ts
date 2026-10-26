@@ -389,3 +389,47 @@ export interface PlotSeasonCost {
   activities: ActivityCostBreakdown[];
 }
 
+// ── Módulo de Compras ─────────────────────────────────────────────────────────
+
+export type PurchaseStatus = 'PENDING' | 'DELIVERED' | 'CANCELLED';
+
+export interface PurchaseItem {
+  id: string;
+  purchase_id: string;
+  supply_id: string;
+  quantity: number;
+  unit_price: number;
+}
+
+export interface Purchase {
+  id: string;
+  farm_id: string;
+  supplier: string;
+  invoice_number: string | null;
+  purchase_date: string;
+  total_value: number;
+  status: PurchaseStatus;
+  notes: string | null;
+  created_at: string;
+  items: PurchaseItem[];
+}
+
+export interface PurchaseCreate {
+  farm_id: string;
+  supplier: string;
+  invoice_number?: string;
+  purchase_date: string;
+  total_value: number;
+  notes?: string;
+  items: { supply_id: string; quantity: number; unit_price: number }[];
+}
+
+export interface PurchaseUpdate {
+  supplier?: string;
+  invoice_number?: string;
+  purchase_date?: string;
+  total_value?: number;
+  status?: PurchaseStatus;
+  notes?: string;
+}
+
