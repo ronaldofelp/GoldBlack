@@ -113,8 +113,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     >
       {/* Logomarca */}
       <div className="flex items-center gap-3 px-4 h-16 border-b border-border flex-shrink-0">
-        <div className="flex items-center justify-center w-8 h-8 bg-gold rounded-lg flex-shrink-0">
-          <span className="text-background font-black text-sm">GB</span>
+        <div className="flex items-center justify-center w-8 h-8 flex-shrink-0">
+          <img src="/logo.svg" alt="GoldBlack Coffee" className="w-8 h-8" />
         </div>
         {!collapsed && (
           <div className="overflow-hidden">

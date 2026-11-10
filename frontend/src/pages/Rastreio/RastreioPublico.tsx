@@ -107,7 +107,7 @@ export function RastreioPublico() {
       {/* Cabeçalho público */}
       <header className="bg-card border-b border-border px-6 py-4 sticky top-0 z-10 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gold rounded flex items-center justify-center text-background font-black text-sm shadow-md">GB</div>
+          <img src="/logo.svg" alt="GoldBlack Coffee" className="w-8 h-8" />
           <span className="font-bold text-lg text-gold">GoldBlack</span>
         </div>
         <div className="flex items-center gap-2 text-text-muted">

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Coffee, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -30,9 +30,7 @@ export function Login() {
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl p-8 animate-in fade-in zoom-in-95 duration-500">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-gold/20 rounded-full flex items-center justify-center mb-4 border border-gold/40">
-            <Coffee size={32} className="text-gold" />
-          </div>
+          <img src="/logo.svg" alt="GoldBlack Coffee" className="w-20 h-20 mb-4" />
           <h1 className="text-2xl font-bold text-text-primary text-center">GoldBlack Coffee</h1>
           <p className="text-text-muted text-center mt-2">Faça login para acessar a plataforma</p>
         </div>
