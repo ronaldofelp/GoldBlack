@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from .database import engine
 from . import models, schemas
@@ -113,7 +114,7 @@ def create_access_token(data: dict) -> str:
 # Rotas públicas: docs, login e o rastreio via QR (o diferencial do produto,
 # precisa ser acessível sem login por quem escaneia o código).
 _PUBLIC_EXACT = {
-    "/", "/health", "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect", "/auth/login",
+    "/", "/health", "/health/db", "/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect", "/auth/login",
 }
 _PUBLIC_EVENTS_RE = re.compile(r"^/trackings/[^/]+/events/?$")
 
@@ -1149,6 +1150,17 @@ def delete_transaction(transaction_id: str, repo: Annotated[IFinancialTransactio
 def health_check():
     """Verifica o status operacional da API."""
     return {"status": "ok", "service": "GoldBlack Coffee API", "version": "1.0.0"}
+
+
+@app.get("/health/db", tags=["Sistema"])
+def health_check_db(db: Annotated[Session, Depends(get_db)]):
+    """Abre uma conexão real com o banco e executa SELECT 1.
+    Usado pelo cron de keepalive para prevenir o auto-stop do Oracle ADB."""
+    try:
+        db.execute(text("SELECT 1"))
+        return {"status": "ok", "db": "reachable"}
+    except Exception as exc:
+        return {"status": "error", "db": "unreachable", "detail": str(exc)}
 
 
 # ── Coffee Tracking ────────────────────────────────────────────────────────────
