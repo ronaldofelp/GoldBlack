@@ -1,4 +1,5 @@
 
+import logging
 import os
 import re
 import uuid
@@ -184,6 +185,8 @@ def _optional_user(request: Request, user_repo: IUserRepository) -> models.User 
     user_id = payload.get("sub")
     return user_repo.get_by_id(user_id) if user_id else None
 
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="GoldBlack Coffee Platform API",
@@ -1159,8 +1162,9 @@ def health_check_db(db: Annotated[Session, Depends(get_db)]):
     try:
         db.execute(text("SELECT 1"))
         return {"status": "ok", "db": "reachable"}
-    except Exception as exc:
-        return {"status": "error", "db": "unreachable", "detail": str(exc)}
+    except Exception:
+        logger.exception("health_check_db: falha ao conectar ao banco")
+        raise HTTPException(status_code=503, detail="db unreachable")
 
 
 # ── Coffee Tracking ────────────────────────────────────────────────────────────
