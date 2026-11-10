@@ -56,6 +56,8 @@ def activity_cost(activity: models.AgriculturalActivity) -> dict:
     machine_cost = sum((machine_usage_cost(u) for u in activity.machine_usages), ZERO)
     return {
         "activity_id": activity.id,
+        "activity_type": activity.type,
+        "activity_date": activity.start_date,
         "supplies_cost": supplies_cost,
         "labor_cost": labor_cost,
         "machine_cost": machine_cost,

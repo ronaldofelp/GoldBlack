@@ -134,7 +134,7 @@ export function NovoRastreio() {
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">
-                Vincular a Lote de Rastreabilidade Base <span className="text-negative">*</span>
+                Lote de Produção <span className="text-negative">*</span>
               </label>
               <select
                 required
@@ -142,7 +142,7 @@ export function NovoRastreio() {
                 onChange={(e) => setFormData(prev => ({ ...prev, batch_id: e.target.value }))}
                 className="w-full bg-background border border-border rounded-lg px-4 py-3 text-text-primary focus:border-gold focus:ring-1 focus:ring-gold/50"
               >
-                <option value="">Selecione um lote base...</option>
+                <option value="">Selecione o lote de produção...</option>
                 {batches.map(b => (
                   <option key={b.id} value={b.id}>
                     {b.batch_code} — {b.coffee_type}

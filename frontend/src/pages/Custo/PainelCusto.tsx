@@ -2,13 +2,21 @@ import { useEffect, useState } from 'react';
 import { Calculator, DollarSign, Layers, Wheat, TrendingUp, Percent, RefreshCw } from 'lucide-react';
 import { KPICard } from '../../components/ui/KPICard';
 import { plotsApi, seasonsApi, costApi } from '../../services/api';
-import type { Plot, Season, PlotSeasonCost } from '../../types';
+import type { Plot, Season, PlotSeasonCost, ActivityType } from '../../types';
 
 const brl = (v: number | null | undefined) =>
   v == null ? '—' : `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const num = (v: number | null | undefined, digits = 2) =>
   v == null ? '—' : Number(v).toLocaleString('pt-BR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+
+const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
+  FERTILIZATION: 'Adubação',
+  PRUNING: 'Poda',
+  HARVEST: 'Colheita',
+  IRRIGATION: 'Irrigação',
+  PESTICIDE_APPLICATION: 'Defensivo',
+};
 
 export function PainelCusto() {
   const [plots, setPlots] = useState<Plot[]>([]);
@@ -162,7 +170,12 @@ export function PainelCusto() {
                     <tbody className="divide-y divide-border/50">
                       {cost.activities.map((a) => (
                         <tr key={a.activity_id}>
-                          <td className="py-2 pr-4 text-text-muted font-mono text-xs">{a.activity_id.slice(0, 8)}</td>
+                          <td className="py-2 pr-4 text-text-primary text-sm">
+                            {ACTIVITY_TYPE_LABELS[a.activity_type]}
+                            <span className="ml-2 text-xs text-text-muted">
+                              {new Date(a.activity_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                            </span>
+                          </td>
                           <td className="py-2 px-4 text-right text-text-muted">{brl(a.supplies_cost)}</td>
                           <td className="py-2 px-4 text-right text-text-muted">{brl(a.labor_cost)}</td>
                           <td className="py-2 px-4 text-right text-text-muted">{brl(a.machine_cost)}</td>

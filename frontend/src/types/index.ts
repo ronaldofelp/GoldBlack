@@ -367,6 +367,8 @@ export interface LaborEntry {
 
 export interface ActivityCostBreakdown {
   activity_id: string;
+  activity_type: ActivityType;
+  activity_date: string;
   supplies_cost: number;
   labor_cost: number;
   machine_cost: number;

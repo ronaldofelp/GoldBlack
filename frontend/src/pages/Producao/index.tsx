@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Sprout, Eye, Calendar } from 'lucide-react';
 import { EntityPageLayout } from '../../components/layout/EntityPageLayout';
-import { batchesApi } from '../../services/api';
-import type { TraceabilityBatch } from '../../types';
+import { batchesApi, plotsApi } from '../../services/api';
+import type { TraceabilityBatch, Plot } from '../../types';
 import { Modal } from '../../components/ui/Modal';
 import { DetailModal } from '../../components/ui/DetailModal';
-import { EntityForm, type FieldDef } from '../../components/ui/EntityForm';
+import { EntityForm } from '../../components/ui/EntityForm';
 
 const COFFEE_TYPE_LABELS: Record<string, string> = {
   NATURAL: 'Natural',
@@ -14,27 +14,37 @@ const COFFEE_TYPE_LABELS: Record<string, string> = {
 
 export function Producao() {
   const [data, setData] = useState<TraceabilityBatch[]>([]);
+  const [plots, setPlots] = useState<Plot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selected, setSelected] = useState<TraceabilityBatch | null>(null);
 
-  const formFields: FieldDef[] = [
-    { name: 'batch_code', label: 'Código do Lote', type: 'text', required: true },
-    { name: 'plot_id', label: 'ID do Talhão', type: 'text', required: true },
-    { name: 'harvest_season', label: 'Safra', type: 'text', required: true },
-    { 
-      name: 'coffee_type', 
-      label: 'Tipo de Café', 
-      type: 'select', 
+  const formFields = [
+    { name: 'batch_code', label: 'Código do Lote', type: 'text' as const, required: true },
+    {
+      name: 'plot_id',
+      label: 'Talhão',
+      type: 'select' as const,
+      required: true,
+      options: plots.map((p) => ({
+        value: p.id,
+        label: p.variety ? `${p.code} — ${p.variety}` : p.code,
+      })),
+    },
+    { name: 'harvest_season', label: 'Safra', type: 'text' as const, required: true },
+    {
+      name: 'coffee_type',
+      label: 'Tipo de Café',
+      type: 'select' as const,
       required: true,
       options: [
         { value: 'NATURAL', label: 'Natural' },
         { value: 'PULPED_NATURAL', label: 'Cereja Descascado' }
       ]
     },
-    { name: 'harvest_date', label: 'Data da Colheita', type: 'date', required: true },
-    { name: 'total_volume_measures', label: 'Volume Total (medidas)', type: 'number', required: true },
+    { name: 'harvest_date', label: 'Data da Colheita', type: 'date' as const, required: true },
+    { name: 'total_volume_measures', label: 'Volume Total (medidas)', type: 'number' as const, required: true },
   ];
 
   const handleCreate = async (data: any) => {
@@ -59,6 +69,7 @@ export function Producao() {
 
   useEffect(() => {
     loadData();
+    plotsApi.list().then((res) => setPlots(res.data)).catch(() => {});
   }, []);
 
   const getCoffeeTypeBadge = (type: string) => {

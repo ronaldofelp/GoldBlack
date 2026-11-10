@@ -679,6 +679,8 @@ class LaborEntryResponse(OrmBase):
 
 class ActivityCostBreakdown(OrmBase):
     activity_id: str
+    activity_type: ActivityType
+    activity_date: date
     supplies_cost: Decimal
     labor_cost: Decimal
     machine_cost: Decimal
