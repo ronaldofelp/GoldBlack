@@ -8,6 +8,27 @@ Conecta o que acontece na lavoura com quanto custou por saca e prova a procedên
 
 ---
 
+## Avaliação do sistema (FIAP Startup One)
+
+O sistema está no ar e pode ser testado diretamente pelo navegador, sem instalação.
+
+| Papel | E-mail | Senha |
+|-------|--------|-------|
+| Administrador | `avaliador.admin@fiap.com` | `Fiap@2026` |
+| Operador | `avaliador.operador@fiap.com` | `Fiap@2026` |
+
+> Se o sistema demorar a responder no primeiro acesso, aguarde alguns segundos — o Oracle Autonomous Database (Always Free) pode estar retomando após período de inatividade.
+
+### Fluxos sugeridos para avaliação
+
+1. **Dashboard** — após o login, o painel exibe indicadores da fazenda (área, custo por saca, produção estimada, receita).
+2. **Custo por talhão e safra** — acesse **Custo → Painel de Custo**, selecione um talhão e uma safra. O sistema calcula custo total, custo/ha e custo/saca a partir dos lançamentos primários, sem totais pré-armazenados.
+3. **Rastreabilidade e QR Code** — acesse **Rastreio**, abra um lote e clique em **Ver QR Code**. A URL pública do QR funciona sem login — é a página que o comprador vê ao escanear a embalagem.
+4. **Compras e estoque** — acesse **Compras** para ver ordens de compra e fornecedores; acesse **Estoque** para verificar que o saldo é atualizado automaticamente quando uma compra é marcada como entregue.
+5. **Controle de acesso** — faça logout e entre com o usuário **Operador**. Compare o menu lateral: itens administrativos (Usuários, parte de Configurações) não aparecem, e as rotas correspondentes também rejeitam chamadas diretas sem o papel correto.
+
+---
+
 ## Funcionalidades principais
 
 | Domínio | O que faz |
@@ -32,13 +53,13 @@ GoldBlack/
 │   │   ├── cost_router.py     # Endpoints do motor de custo
 │   │   ├── services/
 │   │   │   └── costing.py     # Cálculo custo/ha e custo/saca (Decimal, selectinload)
-│   │   ├── models.py          # SQLAlchemy ORM — 29 tabelas
+│   │   ├── models.py          # SQLAlchemy ORM — 32 tabelas
 │   │   ├── schemas.py         # Pydantic v2
 │   │   ├── repositories.py    # Repository pattern (DIP) — interfaces ABC + implementações
 │   │   ├── dependencies.py    # FastAPI Depends — ponto de wiring único
 │   │   └── database.py        # Engine Oracle (prod) / SQLite (dev/test)
-│   ├── alembic/               # Migrações de schema (baseline 29 tabelas + índices)
-│   ├── tests/                 # 30 testes pytest — SQLite em memória, sem Oracle
+│   ├── alembic/               # Migrações de schema (4 migrations, 32 tabelas)
+│   ├── tests/                 # 36 testes pytest — SQLite em memória, sem Oracle
 │   ├── create_admin.py        # Bootstrap do 1º ADMIN em produção
 │   └── Dockerfile
 └── frontend/
@@ -118,7 +139,7 @@ cd backend
 python -m pytest tests/ -v
 ```
 
-30 testes de integração rodando em **SQLite em memória** — sem Oracle, sem wallet, sem variáveis de ambiente extras. São o gate do pipeline de CI: nenhum deploy acontece se um teste falhar.
+36 testes de integração rodando em **SQLite em memória** — sem Oracle, sem wallet, sem variáveis de ambiente extras. São o gate do pipeline de CI: nenhum deploy acontece se um teste falhar.
 
 ---
 
