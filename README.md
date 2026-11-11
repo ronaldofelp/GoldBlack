@@ -1,10 +1,12 @@
 # GoldBlack Coffee Platform
 
+[![CI](https://github.com/ronaldofelp/GoldBlack/actions/workflows/ci.yml/badge.svg)](https://github.com/ronaldofelp/GoldBlack/actions/workflows/ci.yml)
+
 ERP de gestão e rastreabilidade para produtores de café — **em produção** em https://goldblackcoffee.duckdns.org.
 
 Conecta o que acontece na lavoura com quanto custou por saca e prova a procedência do café via QR Code.
 
-**Stack:** React 19 + FastAPI + Oracle Autonomous Database 19c · **Infra:** OCI (VM + ADB + OCIR) · **CI/CD:** GitHub Actions
+**Stack:** React 19 + TypeScript + FastAPI + Oracle Autonomous Database 19c · **Infra:** OCI (VM + ADB + OCIR) · **CI/CD:** GitHub Actions
 
 ---
 
@@ -36,8 +38,9 @@ O sistema está no ar e pode ser testado diretamente pelo navegador, sem instala
 | **Gestão agrícola** | Propriedades, talhões, atividades, solo, clima, estimativas de safra |
 | **Motor de custo** | Insumos + mão de obra + hora-máquina por atividade → **custo/ha e custo/saca** por talhão × safra |
 | **Rastreabilidade QR** | Lote `GB-AAAA-XXXX`, 9 etapas (colheita → finalizado), página pública sem login para o consumidor |
-| **Financeiro / Estoque / Vendas** | Transações, fluxo de caixa, controle de insumos |
-| **Usuários e acesso** | JWT (HS256 · 12h), papéis ADMIN / OPERATOR, RBAC nos endpoints |
+| **Compras** | Ordens de compra por fornecedor, itens com NF, atualização automática do estoque na entrega |
+| **Financeiro / Estoque / Vendas** | Transações, fluxo de caixa, saldo de insumos, registros de venda |
+| **Usuários e acesso** | JWT (HS256 · 12h), papéis ADMIN / OPERATOR, RBAC nos endpoints e na navegação |
 
 ---
 
@@ -58,16 +61,18 @@ GoldBlack/
 │   │   ├── repositories.py    # Repository pattern (DIP) — interfaces ABC + implementações
 │   │   ├── dependencies.py    # FastAPI Depends — ponto de wiring único
 │   │   └── database.py        # Engine Oracle (prod) / SQLite (dev/test)
-│   ├── alembic/               # Migrações de schema (4 migrations, 32 tabelas)
+│   ├── alembic/               # 4 migrações de schema — 32 tabelas em produção
 │   ├── tests/                 # 36 testes pytest — SQLite em memória, sem Oracle
 │   ├── create_admin.py        # Bootstrap do 1º ADMIN em produção
 │   └── Dockerfile
 └── frontend/
     ├── src/
-    │   ├── pages/             # Lavouras, Custo, Rastreio, Financeiro, Usuários…
+    │   ├── pages/             # Lavouras, Custo, Rastreio, Financeiro, Compras, Usuários…
+    │   ├── components/        # Sidebar, EntityPageLayout e componentes reutilizáveis
     │   ├── services/api.ts    # Ponto único de acesso à API (axios)
     │   └── types/index.ts     # Tipos TypeScript compartilhados
-    ├── Dockerfile             # Multi-stage: Node (build Vite) → nginx (servir estático)
+    ├── test/                  # 1 teste Vitest (EntityPageLayout)
+    ├── Dockerfile             # Multi-stage: Node (build Vite) → nginx-unprivileged (uid 101)
     └── nginx.conf
 ```
 
@@ -134,12 +139,23 @@ docker compose up --build
 
 ## Testes
 
+### Backend
+
 ```bash
 cd backend
 python -m pytest tests/ -v
 ```
 
 36 testes de integração rodando em **SQLite em memória** — sem Oracle, sem wallet, sem variáveis de ambiente extras. São o gate do pipeline de CI: nenhum deploy acontece se um teste falhar.
+
+### Frontend
+
+```bash
+cd frontend
+npm run test
+```
+
+1 teste de componente com **Vitest** (`EntityPageLayout`), verificando que o layout genérico de entidades renderiza corretamente.
 
 ---
 
@@ -192,6 +208,8 @@ Configuradas em `.env.prod` na VM (fora do repositório). Nunca commitar segredo
 
 ## Dependências principais
 
+### Backend
+
 | Pacote | Uso |
 |--------|-----|
 | `fastapi 0.115` | Framework web |
@@ -202,5 +220,27 @@ Configuradas em `.env.prod` na VM (fora do repositório). Nunca commitar segredo
 | `python-jose[cryptography]` | JWT (HS256) |
 | `passlib[bcrypt]` | Hash de senhas |
 | `pydantic 2.9` | Validação de dados |
-| `react 19` + `vite 5` | Frontend SPA |
-| `tailwindcss` | Estilização |
+
+### Frontend
+
+| Pacote | Uso |
+|--------|-----|
+| `react 19` + `vite 5` | Framework + bundler |
+| `typescript ~6.0` | Tipagem estática |
+| `tailwindcss` | Estilização utilitária |
+| `axios` | Cliente HTTP (ponto único em `api.ts`) |
+| `vitest` | Testes de componente |
+
+---
+
+## Equipe
+
+Projeto desenvolvido por cinco estudantes de Engenharia de Software na FIAP — Startup One, turma 4ESOA (2026).
+
+| Integrante | RM | Papel |
+|------------|----|-------|
+| Gabriel Genaro Dalaqua | 551986 | Desenvolvimento backend, arquitetura, motor de custo e infraestrutura de produção |
+| Henrique Gagliardi Veneroso | 552196 | Funcional do agronegócio — domínio de custo e rastreabilidade |
+| Ronaldo Felipe da Silva Amorim | 96101 | Desenvolvimento de experiência do usuário (CX) |
+| Paulo Henrique Figueiredo | 98205 | Apoio ao frontend e engenharia de dados |
+| Gabriel Felipe Montoni dos Santos | 552271 | Área administrativa e de negócios |
